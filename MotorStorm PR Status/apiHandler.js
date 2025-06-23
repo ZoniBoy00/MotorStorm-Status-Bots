@@ -4,40 +4,57 @@ const { parsePlayerName } = require("./utils")
 /**
  * Fetch server data from the API for MotorStorm Pacific Rift.
  */
-async function fetchServerData(retries = 3, delay = 10000) {
+async function fetchServerData(retries = 3, delay = 10000, debug = false) {
   try {
-    console.log(`Fetching server data...`)
+    if (debug) console.log(`Fetching server data...`)
 
     // Fetch data for MotorStorm PR (applicationId: 21624)
     const prRoomsResponse = await axios.get("https://api.psrewired.com/us/api/rooms?applicationId=21624")
     const prPlayersResponse = await axios.get("https://api.psrewired.com/us/api/universes/players?applicationId=21624")
+    const prUniverseResponse = await axios.get("https://api.psrewired.com/us/api/universes?applicationId=21624")
 
-    console.log(`Server data fetched successfully.`)
+    if (debug) console.log(`Server data fetched successfully.`)
 
     // Parse data for MotorStorm PR
     const prRoomsData = prRoomsResponse.data
     const prPlayersData = prPlayersResponse.data.map((player) => parsePlayerName(player.name))
-    const prLobbies = await processRooms(prRoomsData, prPlayersData)
+    const prUniverseData = prUniverseResponse.data[0]
+
+    if (debug) {
+      console.log(`\nAPI Response Summary:`)
+      console.log(`Rooms found: ${prRoomsData.length}`)
+      console.log(`Universe players: ${prPlayersData.length}`)
+      console.log(`Universe player count: ${prUniverseData.playerCount}`)
+
+      prRoomsData.forEach((room, index) => {
+        console.log(`Room ${index + 1}: ${room.name} - ${room.playerCount}/${room.maxPlayers} players`)
+      })
+    }
+
+    const prLobbies = await processRooms(prRoomsData, prPlayersData, debug)
+
+    // Calculate total players from lobbies
+    const totalPlayersInLobbies = prLobbies.reduce((sum, lobby) => sum + lobby.player_count, 0)
 
     return {
       motorstorm_pr: {
         general_lobby: {
-          name: "Pacific Rift",
-          player_count: prRoomsData.reduce((sum, room) => sum + (room.playerCount || 0), 0),
+          name: prUniverseData.name || "Pacific Rift",
+          player_count: prUniverseData.playerCount,
           players: prPlayersData,
         },
         lobbies: prLobbies,
         summary: {
-          active_lobbies: prRoomsData.filter((room) => (room.playerCount || 0) > 0).length,
-          total_players: prRoomsData.reduce((sum, room) => sum + (room.playerCount || 0), 0),
+          active_lobbies: prLobbies.filter((lobby) => lobby.is_active).length,
+          total_players: totalPlayersInLobbies,
         },
       },
     }
   } catch (error) {
     if (retries > 0) {
-      console.warn(`Retrying fetchServerData... Retries left: ${retries}`)
+      if (debug) console.warn(`Retrying fetchServerData... Retries left: ${retries}`)
       await new Promise((resolve) => setTimeout(resolve, delay))
-      return fetchServerData(retries - 1, delay)
+      return fetchServerData(retries - 1, delay, debug)
     } else {
       console.error("Error fetching server data:", error.response ? error.response.data : error.message)
       return null
@@ -48,79 +65,105 @@ async function fetchServerData(retries = 3, delay = 10000) {
 /**
  * Process rooms data and extract lobby information.
  */
-async function processRooms(roomsData, allPlayers) {
+async function processRooms(roomsData, allPlayers, debug = false) {
   const lobbies = []
-  const remainingPlayers = [...allPlayers] // Copy of all players for distribution
+
+  if (debug) {
+    console.log(`Processing ${roomsData.length} rooms...`)
+    console.log(`Total players from universe: ${allPlayers.length}`)
+  }
 
   for (const room of roomsData) {
     try {
       const roomId = room.id
-      let roomName = room.name || "Unknown Lobby"
-      let playerCount = room.playerCount || 0
+      const baseRoomName = room.name || "Unknown Lobby"
+      const playerCount = room.playerCount || 0
       const maxPlayers = room.maxPlayers || 12
+
+      if (debug) {
+        console.log(`\nProcessing room: ${baseRoomName} (ID: ${roomId})`)
+        console.log(`Room player count from /rooms: ${playerCount}`)
+      }
 
       // Fetch player data for this specific room
       const roomPlayersResponse = await axios.get(`https://api.psrewired.com/us/api/rooms/${roomId}`)
       const roomPlayersData = roomPlayersResponse.data
 
-      // Update room name from /rooms/{roomId} endpoint
+      if (debug) {
+        console.log(`Room data type:`, typeof roomPlayersData)
+        console.log(`Room data length:`, Array.isArray(roomPlayersData) ? roomPlayersData.length : "N/A")
+      }
+
+      // Handle the case where the room contains multiple sub-lobbies
       if (Array.isArray(roomPlayersData) && roomPlayersData.length > 0) {
-        roomName = roomPlayersData[0].name || roomName
-      } else if (typeof roomPlayersData === "object") {
-        roomName = roomPlayersData.name || roomName
-      }
+        // Each item in the array is a separate lobby
+        for (const subLobby of roomPlayersData) {
+          const lobbyName = subLobby.name || baseRoomName
+          const lobbyPlayerCount = subLobby.playerCount || 0
+          const lobbyMaxPlayers = subLobby.maxPlayers || maxPlayers
 
-      // Handle different response formats (list or dictionary)
-      let players = []
-      if (Array.isArray(roomPlayersData)) {
-        for (const item of roomPlayersData) {
-          if (item.players) {
-            players = players.concat(item.players.map((player) => parsePlayerName(player.name)))
+          // Extract players for this specific sub-lobby
+          let lobbyPlayers = []
+          if (subLobby.players && Array.isArray(subLobby.players)) {
+            lobbyPlayers = subLobby.players.map((player) => parsePlayerName(player.name))
           }
-        }
-      } else if (typeof roomPlayersData === "object") {
-        if (roomPlayersData.players) {
-          players = roomPlayersData.players.map((player) => parsePlayerName(player.name))
-        } else if (roomPlayersData.playerCount && roomPlayersData.playerCount > 0) {
-          // If we have a player count but no player list, try to match from allPlayers
-          // This helps when the API doesn't return all player names
-          const roomNamePrefix = roomName.split("-")[0]
-          if (roomNamePrefix) {
-            // Try to find players with matching prefix in their name
-            const matchingPlayers = allPlayers.filter((player) =>
-              player.toLowerCase().includes(roomName.split("-")[1]?.toLowerCase() || ""),
-            )
-            players = matchingPlayers.slice(0, roomPlayersData.playerCount)
+
+          if (debug) {
+            console.log(`Found sub-lobby: ${lobbyName} with ${lobbyPlayerCount} players`)
+            console.log(`Players:`, lobbyPlayers)
           }
+
+          lobbies.push({
+            name: lobbyName,
+            player_count: lobbyPlayerCount,
+            max_players: lobbyMaxPlayers,
+            players: lobbyPlayers,
+            is_active: lobbyPlayerCount > 0,
+          })
         }
-      }
+      } else if (typeof roomPlayersData === "object" && roomPlayersData.players) {
+        // Single lobby format
+        const lobbyPlayers = roomPlayersData.players.map((player) => parsePlayerName(player.name))
 
-      // Remove these players from the remainingPlayers list
-      for (const player of players) {
-        const index = remainingPlayers.indexOf(player)
-        if (index !== -1) remainingPlayers.splice(index, 1)
+        lobbies.push({
+          name: roomPlayersData.name || baseRoomName,
+          player_count: roomPlayersData.playerCount || playerCount,
+          max_players: roomPlayersData.maxPlayers || maxPlayers,
+          players: lobbyPlayers,
+          is_active: (roomPlayersData.playerCount || playerCount) > 0,
+        })
+      } else if (playerCount === 0) {
+        // Empty room
+        lobbies.push({
+          name: baseRoomName,
+          player_count: 0,
+          max_players: maxPlayers,
+          players: [],
+          is_active: false,
+        })
       }
-
-      // Adjust playerCount if there's a mismatch
-      if (players.length > 0 && players.length !== playerCount) {
-        // If we have players but count doesn't match, update the count to match reality
-        playerCount = players.length
-      }
-
-      lobbies.push({
-        name: roomName, // Use the updated room name here
-        player_count: playerCount,
-        max_players: maxPlayers,
-        players: players,
-        is_active: playerCount > 0,
-      })
     } catch (error) {
-      console.error(`Error processing room with ID ${room.id}:`, error)
+      console.error(`Error processing room with ID ${room.id}:`, error.message)
+
+      // Still add the lobby even if we can't fetch detailed player info
+      lobbies.push({
+        name: room.name || "Unknown Lobby",
+        player_count: room.playerCount || 0,
+        max_players: room.maxPlayers || 12,
+        players: [],
+        is_active: (room.playerCount || 0) > 0,
+      })
     }
+  }
+
+  if (debug) {
+    console.log(`\nFinal lobbies:`)
+    lobbies.forEach((lobby) => {
+      console.log(`- ${lobby.name}: ${lobby.player_count}/${lobby.max_players} players`)
+    })
   }
 
   return lobbies
 }
 
 module.exports = { fetchServerData }
-
