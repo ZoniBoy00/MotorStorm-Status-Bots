@@ -67,7 +67,7 @@ client.once("ready", () => {
 // Update the status every 10 seconds
 async function checkServerStatus() {
   try {
-    console.log(`Checking server status...`)
+    if (DEBUG) console.log(`Checking server status...`)
     const channel = client.channels.cache.get(CHANNEL_ID)
     if (!channel) {
       if (DEBUG) console.error("Channel not found.")
@@ -81,18 +81,18 @@ async function checkServerStatus() {
       return
     }
 
-    console.log(`Channel found: ${channel.id} - ${channel.name}`)
+    if (DEBUG) console.log(`Channel found: ${channel.id} - ${channel.name}`)
 
-    const data = await fetchServerData()
+    const data = await fetchServerData(3, 10000, DEBUG)
     if (!data) {
       console.log(`Failed to fetch server data.`)
       return
     }
 
-    console.log(`Server data fetched successfully.`)
+    if (DEBUG) console.log(`Server data fetched successfully.`)
 
     const embed = formatEmbed(data) // Get the embed object
-    console.log(`Embed created successfully.`)
+    if (DEBUG) console.log(`Embed created successfully.`)
 
     const message = await getOrCreateMessage(channel, MESSAGE_ID_FILE, data, formatEmbed)
     if (!message) {
@@ -100,7 +100,7 @@ async function checkServerStatus() {
       return
     }
 
-    console.log(`Message found or created: ${message.id}`)
+    if (DEBUG) console.log(`Message found or created: ${message.id}`)
 
     await message.edit({ embeds: [embed] }) // Edit the message with the new embed
     console.log("🔔 Status updated.")
@@ -119,15 +119,15 @@ async function checkServerStatus() {
 client.on("messageCreate", async (message) => {
   try {
     if (message.content === "!status") {
-      console.log(`Command "!status" received from user: ${message.author.tag}`)
-      const data = await fetchServerData()
+      if (DEBUG) console.log(`Command "!status" received from user: ${message.author.tag}`)
+      const data = await fetchServerData(3, 10000, DEBUG)
       if (data) {
         const embed = formatEmbed(data) // Get the embed object
         await message.channel.send({ embeds: [embed] }) // Send the message with the embed
-        console.log(`Status sent to channel: ${message.channel.name}`)
+        if (DEBUG) console.log(`Status sent to channel: ${message.channel.name}`)
       } else {
         await message.channel.send("Failed to fetch server status.")
-        console.log(`Failed to fetch server status for command "!status".`)
+        if (DEBUG) console.log(`Failed to fetch server status for command "!status".`)
       }
     }
   } catch (error) {
@@ -137,4 +137,3 @@ client.on("messageCreate", async (message) => {
 
 // Log in to Discord
 client.login(TOKEN)
-
