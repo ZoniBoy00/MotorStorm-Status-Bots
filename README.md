@@ -256,7 +256,7 @@ npm run build
 3. Extend `BaseBot` and implement all abstract methods
 4. Add bot import to `src/index.ts`
 5. Add environment variables to `.env.example`
-6. Update README and Pterodactyl egg
+6. Update README
 
 ### Code Style
 
