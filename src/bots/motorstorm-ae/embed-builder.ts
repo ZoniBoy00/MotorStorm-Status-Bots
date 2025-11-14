@@ -14,7 +14,7 @@ export function buildAEEmbed(data: ServerData): EmbedBuilder {
     )
     .setColor('#7db3d5')
     .setTimestamp(new Date())
-    .setThumbnail('https://i.imgur.com/Aswk17R.jpeg');
+    .setThumbnail('https://i.imgur.com/165bVYY.png');
 
   // Add summary with better visual separation
   const summaryEmoji = aeData.summary.total_players > 0 ? '🟢' : '⚪';
@@ -91,7 +91,7 @@ export function buildAEEmbed(data: ServerData): EmbedBuilder {
   // Enhanced footer
   embed.setFooter({
     text: 'Made with ❤️ by ZoniBoy00 | Last Updated',
-    iconURL: 'https://i.imgur.com/Aswk17R.jpeg',
+    iconURL: 'https://i.imgur.com/165bVYY.png',
   });
 
   return embed;

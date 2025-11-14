@@ -14,7 +14,7 @@ export function buildApocEmbed(data: ServerData): EmbedBuilder {
     )
     .setColor('#ce5c2b')
     .setTimestamp(new Date())
-    .setThumbnail('https://i.imgur.com/7cPzbJt.jpeg');
+    .setThumbnail('https://i.imgur.com/a0EtQ5i.png');
 
   // Add summary with better visual separation
   const summaryEmoji = msaData.summary.total_players > 0 ? '🟢' : '⚪';
@@ -75,7 +75,7 @@ export function buildApocEmbed(data: ServerData): EmbedBuilder {
   // Enhanced footer
   embed.setFooter({
     text: 'Made with ❤️ by ZoniBoy00 | Last Updated',
-    iconURL: 'https://i.imgur.com/7cPzbJt.jpeg',
+    iconURL: 'https://i.imgur.com/a0EtQ5i.png',
   });
 
   return embed;
