@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits, EmbedBuilder, TextChannel, ChannelType, Events } from 'discord.js';
 import { BotConfig, ActivityConfig, ServerData } from '../types';
-import { Logger, MessageManager } from '../utils';
+import { Logger, MessageManager, NotificationManager } from '../utils';
 
 /**
  * Abstract base class for all MotorStorm bots with multi-channel support
@@ -10,6 +10,7 @@ export abstract class BaseBot {
   protected config: BotConfig;
   protected logger: Logger;
   protected messageManager: MessageManager;
+  protected notificationManager: NotificationManager;
   protected activities: ActivityConfig[];
   protected activityIndex: number = 0;
   protected totalPlayers: number = 0;
@@ -22,6 +23,12 @@ export abstract class BaseBot {
     this.config = config;
     this.logger = new Logger(botName);
     this.messageManager = new MessageManager(botName);
+    
+    this.notificationManager = new NotificationManager(
+      botName,
+      config.notificationChannelId,
+      config.notificationRoleId
+    );
 
     this.client = new Client({
       intents: [
@@ -60,6 +67,11 @@ export abstract class BaseBot {
    * Get total players from data - to be implemented by each bot
    */
   protected abstract getTotalPlayers(data: ServerData): number;
+
+  /**
+   * Get lobbies from server data - to be implemented by each bot
+   */
+  protected abstract getLobbies(data: ServerData): any[];
 
   /**
    * Setup event handlers
@@ -168,6 +180,21 @@ export abstract class BaseBot {
 
       // Update total players count
       this.totalPlayers = this.getTotalPlayers(data);
+
+      // Check for new lobbies and send notifications
+      const lobbies = this.getLobbies(data);
+      
+      if (this.config.notificationChannelId) {
+        const notificationChannel = this.client.channels.cache.get(
+          this.config.notificationChannelId
+        ) as TextChannel;
+        
+        if (notificationChannel) {
+          await this.notificationManager.checkForNewLobbies(lobbies, notificationChannel);
+        } else if (lobbies.length > 0 && this.config.debug) {
+          this.logger.warning(`Notification channel ${this.config.notificationChannelId} not found`);
+        }
+      }
 
       // Process all channels in parallel for better performance
       await Promise.allSettled(

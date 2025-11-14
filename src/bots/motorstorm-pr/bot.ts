@@ -1,6 +1,6 @@
 import { ActivityType, EmbedBuilder } from 'discord.js';
 import { BaseBot } from '../../core';
-import { ActivityConfig, ServerData } from '../../types';
+import { ActivityConfig, ServerData, Lobby } from '../../types';
 import { PRApiHandler } from './api-handler';
 import { buildPREmbed } from './embed-builder';
 import { getPRConfig } from './config';
@@ -39,5 +39,9 @@ export class MotorStormPRBot extends BaseBot {
 
   protected getTotalPlayers(data: ServerData): number {
     return data.motorstorm_pr.summary.total_players;
+  }
+
+  protected getLobbies(data: ServerData): Lobby[] {
+    return data.motorstorm_pr.lobbies;
   }
 }

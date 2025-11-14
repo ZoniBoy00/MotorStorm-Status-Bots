@@ -16,7 +16,6 @@ const colors = {
   yellow: '\x1b[33m',
   red: '\x1b[31m',
   blue: '\x1b[34m',
-  magenta: '\x1b[35m',
 };
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -26,39 +25,29 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  */
 async function main() {
   console.log(`\n${colors.bright}${colors.cyan}╔═══════════════════════════════════════════════════════╗${colors.reset}`);
-  console.log(`${colors.bright}${colors.cyan}║   MotorStorm Status Bots - Unified Launcher v2.0      ║${colors.reset}`);
+  console.log(`${colors.bright}${colors.cyan}║   MotorStorm Status Bots - Unified Launcher v2.1      ║${colors.reset}`);
   console.log(`${colors.bright}${colors.cyan}╚═══════════════════════════════════════════════════════╝${colors.reset}\n`);
 
   const bots: Array<{ name: string; instance: any }> = [];
   const errors: Array<{ name: string; error: Error }> = [];
 
-  // Initialize all bots
   const botConfigs = [
     { name: 'Arctic Edge', Bot: MotorStormAEBot, enabled: !!process.env.DISCORD_TOKEN_AE },
-    {
-      name: 'Apocalypse',
-      Bot: MotorStormApocBot,
-      enabled: !!process.env.DISCORD_TOKEN_APOC,
-    },
+    { name: 'Apocalypse', Bot: MotorStormApocBot, enabled: !!process.env.DISCORD_TOKEN_APOC },
     { name: 'Pacific Rift', Bot: MotorStormPRBot, enabled: !!process.env.DISCORD_TOKEN_PR },
-    {
-      name: 'Monument Valley',
-      Bot: MotorStormMVBot,
-      enabled: !!process.env.DISCORD_TOKEN_MV,
-    },
+    { name: 'Monument Valley', Bot: MotorStormMVBot, enabled: !!process.env.DISCORD_TOKEN_MV },
   ];
 
   console.log(`${colors.bright}📋 Bot Configuration:${colors.reset}`);
   botConfigs.forEach(({ name, enabled }) => {
     const icon = enabled ? `${colors.green}✅${colors.reset}` : `${colors.red}❌${colors.reset}`;
-    const status = enabled ? `${colors.green}Enabled${colors.reset}` : `${colors.dim}Disabled (no token)${colors.reset}`;
+    const status = enabled ? `${colors.green}Enabled${colors.reset}` : `${colors.dim}Disabled${colors.reset}`;
     console.log(`   ${icon} ${colors.bright}${name}${colors.reset}: ${status}`);
   });
   console.log('');
 
   for (const { name, Bot, enabled } of botConfigs) {
     if (!enabled) {
-      console.log(`${colors.yellow}⏭️  Skipping ${name} (no token configured)${colors.reset}\n`);
       continue;
     }
 
@@ -77,10 +66,8 @@ async function main() {
     }
   }
 
-  // Summary
   console.log(`${colors.bright}${colors.cyan}╔═══════════════════════════════════════════════════════╗${colors.reset}`);
-  const statusText = `Status: ${colors.green}${bots.length} bot(s) running${colors.reset}, ${errors.length > 0 ? `${colors.red}${errors.length} failed${colors.reset}` : `${colors.green}0 failed${colors.reset}`}`;
-  console.log(`${colors.bright}${colors.cyan}║${colors.reset}  ${statusText}  ${colors.bright}${colors.cyan}                 ║${colors.reset}`);
+  console.log(`${colors.bright}${colors.cyan}║${colors.reset}  ${colors.green}${bots.length} bot(s) running${colors.reset}, ${errors.length > 0 ? `${colors.red}${errors.length} failed${colors.reset}` : `${colors.green}0 failed${colors.reset}`}  ${colors.bright}${colors.cyan}                         ║${colors.reset}`);
   console.log(`${colors.bright}${colors.cyan}╚═══════════════════════════════════════════════════════╝${colors.reset}\n`);
 
   if (bots.length === 0) {

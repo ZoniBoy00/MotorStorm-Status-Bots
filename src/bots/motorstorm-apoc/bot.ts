@@ -1,6 +1,6 @@
 import { ActivityType, EmbedBuilder } from 'discord.js';
 import { BaseBot } from '../../core';
-import { ActivityConfig, ServerData } from '../../types';
+import { ActivityConfig, ServerData, Lobby } from '../../types';
 import { ApocApiHandler } from './api-handler';
 import { buildApocEmbed } from './embed-builder';
 import { getApocConfig } from './config';
@@ -39,5 +39,9 @@ export class MotorStormApocBot extends BaseBot {
 
   protected getTotalPlayers(data: ServerData): number {
     return data.motorstorm_msa.summary.total_players;
+  }
+
+  protected getLobbies(data: ServerData): Lobby[] {
+    return data.motorstorm_msa.lobbies;
   }
 }

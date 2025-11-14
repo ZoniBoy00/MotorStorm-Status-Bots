@@ -1,7 +1,7 @@
 {
   "name": "motorstorm-status-bots",
-  "version": "2.0.0",
-  "description": "TypeScript Discord bots for monitoring MotorStorm server status",
+  "version": "2.1.0",
+  "description": "TypeScript Discord bots for monitoring MotorStorm server status with lobby notifications",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -12,15 +12,16 @@
     "start:pr": "ts-node src/bots/motorstorm-pr/index.ts",
     "start:mv": "ts-node src/bots/motorstorm-mv/index.ts",
     "clean": "rm -rf dist",
-    "watch": "tsc --watch",
-    "lint": "echo 'Linting not configured yet'"
+    "watch": "tsc --watch"
   },
   "keywords": [
     "discord",
     "bot",
     "motorstorm",
     "typescript",
-    "gaming"
+    "gaming",
+    "notifications",
+    "lobby-alerts"
   ],
   "author": "ZoniBoy00",
   "license": "MIT",

@@ -16,6 +16,15 @@ export function getPRConfig(): BotConfig {
     ? process.env.CHANNEL_IDS_PR.split(',').map((id) => id.trim())
     : ['1358455464299335822'];
 
+  const notificationChannelId = process.env.NOTIFICATION_CHANNEL_PR;
+  const notificationRoleId = process.env.NOTIFICATION_ROLE_PR;
+
+  if (process.env.DEBUG === 'true') {
+    console.log('\x1b[36m[PR Config] Environment Variables:\x1b[0m');
+    console.log(`  NOTIFICATION_CHANNEL_PR: ${notificationChannelId || '\x1b[90m(not set)\x1b[0m'}`);
+    console.log(`  NOTIFICATION_ROLE_PR: ${notificationRoleId || '\x1b[90m(not set)\x1b[0m'}`);
+  }
+
   return {
     token,
     channelIds,
@@ -25,5 +34,7 @@ export function getPRConfig(): BotConfig {
     gameName: 'MotorStorm Pacific Rift',
     apiEndpoint: 'https://api.psrewired.com/us/api',
     dataKey: 'motorstorm_pr',
+    notificationChannelId,
+    notificationRoleId,
   };
 }

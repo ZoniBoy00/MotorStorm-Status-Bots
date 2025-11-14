@@ -1,6 +1,6 @@
 import { ActivityType, EmbedBuilder } from 'discord.js';
 import { BaseBot } from '../../core';
-import { ActivityConfig, ServerData } from '../../types';
+import { ActivityConfig, ServerData, Lobby } from '../../types';
 import { MVApiHandler } from './api-handler';
 import { buildMVEmbed } from './embed-builder';
 import { getMVConfig } from './config';
@@ -39,5 +39,9 @@ export class MotorStormMVBot extends BaseBot {
 
   protected getTotalPlayers(data: ServerData): number {
     return data.motorstorm_mv.summary.total_players;
+  }
+
+  protected getLobbies(data: ServerData): Lobby[] {
+    return data.motorstorm_mv.lobbies;
   }
 }

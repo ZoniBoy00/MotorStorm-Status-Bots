@@ -1,6 +1,6 @@
 import { ActivityType, EmbedBuilder } from 'discord.js';
 import { BaseBot } from '../../core';
-import { ActivityConfig, ServerData } from '../../types';
+import { ActivityConfig, ServerData, Lobby } from '../../types';
 import { AEApiHandler } from './api-handler';
 import { buildAEEmbed } from './embed-builder';
 import { getAEConfig } from './config';
@@ -39,5 +39,9 @@ export class MotorStormAEBot extends BaseBot {
 
   protected getTotalPlayers(data: ServerData): number {
     return data.motorstorm_ae.summary.total_players;
+  }
+
+  protected getLobbies(data: ServerData): Lobby[] {
+    return data.motorstorm_ae.lobbies;
   }
 }

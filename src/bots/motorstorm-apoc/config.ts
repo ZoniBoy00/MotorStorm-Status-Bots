@@ -16,6 +16,15 @@ export function getApocConfig(): BotConfig {
     ? process.env.CHANNEL_IDS_APOC.split(',').map((id) => id.trim())
     : ['1358455464299335822'];
 
+  const notificationChannelId = process.env.NOTIFICATION_CHANNEL_APOC;
+  const notificationRoleId = process.env.NOTIFICATION_ROLE_APOC;
+
+  if (process.env.DEBUG === 'true') {
+    console.log('\x1b[36m[Apoc Config] Environment Variables:\x1b[0m');
+    console.log(`  NOTIFICATION_CHANNEL_APOC: ${notificationChannelId || '\x1b[90m(not set)\x1b[0m'}`);
+    console.log(`  NOTIFICATION_ROLE_APOC: ${notificationRoleId || '\x1b[90m(not set)\x1b[0m'}`);
+  }
+
   return {
     token,
     channelIds,
@@ -25,5 +34,7 @@ export function getApocConfig(): BotConfig {
     gameName: 'MotorStorm Apocalypse',
     apiEndpoint: 'http://api.psorg-web-revival.us:61920',
     dataKey: 'motorstorm_msa',
+    notificationChannelId,
+    notificationRoleId,
   };
 }

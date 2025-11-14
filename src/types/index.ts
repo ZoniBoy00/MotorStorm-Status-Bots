@@ -10,6 +10,8 @@ export interface BotConfig {
   gameName: string;
   apiEndpoint: string;
   dataKey: string;
+  notificationChannelId?: string;
+  notificationRoleId?: string;
 }
 
 export interface ActivityConfig {
@@ -58,6 +60,18 @@ export interface ServerData {
 // Message storage types
 export interface MessageIdStore {
   [channelId: string]: string;
+}
+
+export interface LobbyNotification {
+  lobbyName: string;
+  players: string[];
+  timestamp: number;
+}
+
+export interface NotificationStore {
+  [channelId: string]: {
+    [lobbyName: string]: LobbyNotification;
+  };
 }
 
 // Logger types
