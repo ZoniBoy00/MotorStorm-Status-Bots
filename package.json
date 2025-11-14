@@ -1,0 +1,43 @@
+{
+  "name": "motorstorm-status-bots",
+  "version": "2.0.0",
+  "description": "TypeScript Discord bots for monitoring MotorStorm server status",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node dist/index.js",
+    "start:dev": "ts-node src/index.ts",
+    "start:ae": "ts-node src/bots/motorstorm-ae/index.ts",
+    "start:apoc": "ts-node src/bots/motorstorm-apoc/index.ts",
+    "start:pr": "ts-node src/bots/motorstorm-pr/index.ts",
+    "start:mv": "ts-node src/bots/motorstorm-mv/index.ts",
+    "clean": "rm -rf dist",
+    "watch": "tsc --watch",
+    "lint": "echo 'Linting not configured yet'"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "motorstorm",
+    "typescript",
+    "gaming"
+  ],
+  "author": "ZoniBoy00",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.2",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/xml2js": "^0.4.14",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
