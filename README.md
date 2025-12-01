@@ -34,7 +34,7 @@ Professional TypeScript Discord bots for monitoring MotorStorm server status wit
 ### Installation
 
 ```bash
-cd TS_BOTS
+cd MotorStorm-Status-Bots
 npm install
 ```
 
