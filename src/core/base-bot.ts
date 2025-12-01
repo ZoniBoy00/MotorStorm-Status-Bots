@@ -27,7 +27,8 @@ export abstract class BaseBot {
     this.notificationManager = new NotificationManager(
       botName,
       config.notificationChannelId,
-      config.notificationRoleId
+      config.notificationRoleId,
+      config.notificationPingsEnabled ?? true
     );
 
     this.client = new Client({

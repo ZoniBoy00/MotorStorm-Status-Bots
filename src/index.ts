@@ -2,6 +2,7 @@ import { MotorStormAEBot } from './bots/motorstorm-ae';
 import { MotorStormApocBot } from './bots/motorstorm-apoc';
 import { MotorStormPRBot } from './bots/motorstorm-pr';
 import { MotorStormMVBot } from './bots/motorstorm-mv';
+import { HelperBot } from './bots/motorstorm-helper/bot';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -16,6 +17,7 @@ const colors = {
   yellow: '\x1b[33m',
   red: '\x1b[31m',
   blue: '\x1b[34m',
+  magenta: '\x1b[35m',
 };
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -25,7 +27,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  */
 async function main() {
   console.log(`\n${colors.bright}${colors.cyan}╔═══════════════════════════════════════════════════════╗${colors.reset}`);
-  console.log(`${colors.bright}${colors.cyan}║   MotorStorm Status Bots - Unified Launcher v2.1      ║${colors.reset}`);
+  console.log(`${colors.bright}${colors.cyan}║   MotorStorm Status Bots - Unified Launcher v2.2      ║${colors.reset}`);
   console.log(`${colors.bright}${colors.cyan}╚═══════════════════════════════════════════════════════╝${colors.reset}\n`);
 
   const bots: Array<{ name: string; instance: any }> = [];
@@ -36,6 +38,7 @@ async function main() {
     { name: 'Apocalypse', Bot: MotorStormApocBot, enabled: !!process.env.DISCORD_TOKEN_APOC },
     { name: 'Pacific Rift', Bot: MotorStormPRBot, enabled: !!process.env.DISCORD_TOKEN_PR },
     { name: 'Monument Valley', Bot: MotorStormMVBot, enabled: !!process.env.DISCORD_TOKEN_MV },
+    { name: 'Helper (Analytics)', Bot: HelperBot, enabled: !!process.env.DISCORD_TOKEN_HELPER },
   ];
 
   console.log(`${colors.bright}📋 Bot Configuration:${colors.reset}`);

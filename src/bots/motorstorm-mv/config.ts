@@ -18,11 +18,13 @@ export function getMVConfig(): BotConfig {
 
   const notificationChannelId = process.env.NOTIFICATION_CHANNEL_MV;
   const notificationRoleId = process.env.NOTIFICATION_ROLE_MV;
+  const notificationPingsEnabled = process.env.NOTIFICATION_PINGS_MV !== 'false';
 
   if (process.env.DEBUG === 'true') {
     console.log('\x1b[36m[MV Config] Environment Variables:\x1b[0m');
     console.log(`  NOTIFICATION_CHANNEL_MV: ${notificationChannelId || '\x1b[90m(not set)\x1b[0m'}`);
     console.log(`  NOTIFICATION_ROLE_MV: ${notificationRoleId || '\x1b[90m(not set)\x1b[0m'}`);
+    console.log(`  NOTIFICATION_PINGS_MV: ${notificationPingsEnabled ? 'true' : 'false'}`);
   }
 
   return {
@@ -36,5 +38,6 @@ export function getMVConfig(): BotConfig {
     dataKey: 'motorstorm_mv',
     notificationChannelId,
     notificationRoleId,
+    notificationPingsEnabled,
   };
 }

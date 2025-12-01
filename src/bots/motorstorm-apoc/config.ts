@@ -18,11 +18,13 @@ export function getApocConfig(): BotConfig {
 
   const notificationChannelId = process.env.NOTIFICATION_CHANNEL_APOC;
   const notificationRoleId = process.env.NOTIFICATION_ROLE_APOC;
+  const notificationPingsEnabled = process.env.NOTIFICATION_PINGS_APOC !== 'false';
 
   if (process.env.DEBUG === 'true') {
     console.log('\x1b[36m[Apoc Config] Environment Variables:\x1b[0m');
     console.log(`  NOTIFICATION_CHANNEL_APOC: ${notificationChannelId || '\x1b[90m(not set)\x1b[0m'}`);
     console.log(`  NOTIFICATION_ROLE_APOC: ${notificationRoleId || '\x1b[90m(not set)\x1b[0m'}`);
+    console.log(`  NOTIFICATION_PINGS_APOC: ${notificationPingsEnabled ? 'true' : 'false'}`);
   }
 
   return {
@@ -32,9 +34,10 @@ export function getApocConfig(): BotConfig {
     activityRotationInterval: 30000,
     debug: process.env.DEBUG === 'true',
     gameName: 'MotorStorm Apocalypse',
-    apiEndpoint: 'http://api.psorg-web-revival.us:61920',
+    apiEndpoint: 'http://api.psorg-web-revival.us:61921',
     dataKey: 'motorstorm_msa',
     notificationChannelId,
     notificationRoleId,
+    notificationPingsEnabled,
   };
 }

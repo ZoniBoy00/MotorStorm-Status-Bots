@@ -14,6 +14,7 @@ interface NotificationConfig {
   channelId: string;
   roleId: string;
   enabled: boolean;
+  pingsEnabled: boolean;
 }
 
 /**
@@ -28,7 +29,7 @@ export class NotificationManager {
   private fileSystemAvailable: boolean = true;
   private hasLoggedInitStatus: boolean = false;
 
-  constructor(botName: string, notificationChannelId?: string, notificationRoleId?: string) {
+  constructor(botName: string, notificationChannelId?: string, notificationRoleId?: string, pingsEnabled: boolean = true) {
     this.logger = new Logger(botName);
     this.previousLobbies = new Map();
     
@@ -43,10 +44,12 @@ export class NotificationManager {
         channelId: notificationChannelId,
         roleId: notificationRoleId,
         enabled: true,
+        pingsEnabled: pingsEnabled,
       };
       console.log(`\x1b[32m[${botName}] 🔔 Lobby notifications ENABLED\x1b[0m`);
       console.log(`\x1b[36m[${botName}]    └─ Channel: ${notificationChannelId}\x1b[0m`);
       console.log(`\x1b[36m[${botName}]    └─ Role: ${notificationRoleId}\x1b[0m`);
+      console.log(`\x1b[36m[${botName}]    └─ Pings: ${pingsEnabled ? '\x1b[32mENABLED' : '\x1b[33mDISABLED'}\x1b[0m`);
     } else {
       console.log(`\x1b[33m[${botName}] 🔔 Lobby notifications DISABLED\x1b[0m`);
       if (!notificationChannelId) {
@@ -189,7 +192,7 @@ export class NotificationManager {
   private async sendLobbyNotification(lobby: Lobby, channel: TextChannel): Promise<void> {
     try {
       const roleId = this.notificationConfig!.roleId;
-      const roleMention = `<@&${roleId}>`;
+      const roleMention = this.notificationConfig!.pingsEnabled ? `<@&${roleId}>` : `@${channel.guild.roles.cache.get(roleId)?.name || 'Racers'}`;
 
       const playerList = lobby.players.map((p) => `\`${p}\``).join(', ');
       const playerCount = `**${lobby.player_count}/${lobby.max_players}**`;
@@ -240,7 +243,7 @@ export class NotificationManager {
 
       await channel.send(finalMessage);
 
-      this.logger.success(`Notification sent for "${lobby.name}"`);
+      this.logger.success(`Notification sent for "${lobby.name}" ${this.notificationConfig!.pingsEnabled ? 'with' : 'without'} ping`);
     } catch (error) {
       this.logger.error(`Failed to send notification: ${error}`);
     }

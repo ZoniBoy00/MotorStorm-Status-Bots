@@ -18,11 +18,13 @@ export function getPRConfig(): BotConfig {
 
   const notificationChannelId = process.env.NOTIFICATION_CHANNEL_PR;
   const notificationRoleId = process.env.NOTIFICATION_ROLE_PR;
+  const notificationPingsEnabled = process.env.NOTIFICATION_PINGS_PR !== 'false';
 
   if (process.env.DEBUG === 'true') {
     console.log('\x1b[36m[PR Config] Environment Variables:\x1b[0m');
     console.log(`  NOTIFICATION_CHANNEL_PR: ${notificationChannelId || '\x1b[90m(not set)\x1b[0m'}`);
     console.log(`  NOTIFICATION_ROLE_PR: ${notificationRoleId || '\x1b[90m(not set)\x1b[0m'}`);
+    console.log(`  NOTIFICATION_PINGS_PR: ${notificationPingsEnabled ? 'true' : 'false'}`);
   }
 
   return {
@@ -36,5 +38,6 @@ export function getPRConfig(): BotConfig {
     dataKey: 'motorstorm_pr',
     notificationChannelId,
     notificationRoleId,
+    notificationPingsEnabled,
   };
 }

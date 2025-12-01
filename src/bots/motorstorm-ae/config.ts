@@ -19,11 +19,13 @@ export function getAEConfig(): BotConfig {
 
   const notificationChannelId = process.env.NOTIFICATION_CHANNEL_AE;
   const notificationRoleId = process.env.NOTIFICATION_ROLE_AE;
+  const notificationPingsEnabled = process.env.NOTIFICATION_PINGS_AE !== 'false';
 
   if (process.env.DEBUG === 'true') {
     console.log('\x1b[36m[AE Config] Environment Variables:\x1b[0m');
     console.log(`  NOTIFICATION_CHANNEL_AE: ${notificationChannelId || '\x1b[90m(not set)\x1b[0m'}`);
     console.log(`  NOTIFICATION_ROLE_AE: ${notificationRoleId || '\x1b[90m(not set)\x1b[0m'}`);
+    console.log(`  NOTIFICATION_PINGS_AE: ${notificationPingsEnabled ? 'true' : 'false'}`);
   }
 
   return {
@@ -37,5 +39,6 @@ export function getAEConfig(): BotConfig {
     dataKey: 'motorstorm_ae',
     notificationChannelId,
     notificationRoleId,
+    notificationPingsEnabled,
   };
 }

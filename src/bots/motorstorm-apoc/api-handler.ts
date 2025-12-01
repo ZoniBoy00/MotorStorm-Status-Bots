@@ -30,7 +30,7 @@ interface ApocEntry {
  */
 export class ApocApiHandler extends ApiClient {
   private readonly APP_ID = '22500';
-  private readonly API_URL = 'http://api.psorg-web-revival.us:61920/GetRooms/';
+  private readonly API_URL = 'http://api.psorg-web-revival.us:61921/GetRooms/';
 
   constructor() {
     super('MotorStorm-Apoc');
