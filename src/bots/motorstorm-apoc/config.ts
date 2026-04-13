@@ -1,7 +1,4 @@
 import { BotConfig } from '../../types';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
 
 /**
  * Configuration for MotorStorm Apocalypse bot
@@ -12,18 +9,26 @@ export function getApocConfig(): BotConfig {
     throw new Error('DISCORD_TOKEN_APOC environment variable is required');
   }
 
-  const channelIds = process.env.CHANNEL_IDS_APOC
-    ? process.env.CHANNEL_IDS_APOC.split(',').map((id) => id.trim())
-    : ['1358455464299335822'];
+  const channelIdsEnv = process.env.CHANNEL_IDS_APOC;
+  if (!channelIdsEnv) {
+    throw new Error('CHANNEL_IDS_APOC environment variable is required (comma-separated channel IDs)');
+  }
+
+  const channelIds = channelIdsEnv.split(',').map((id) => id.trim()).filter(Boolean);
+
+  if (channelIds.length === 0) {
+    throw new Error('CHANNEL_IDS_APOC must contain at least one channel ID');
+  }
 
   const notificationChannelId = process.env.NOTIFICATION_CHANNEL_APOC;
   const notificationRoleId = process.env.NOTIFICATION_ROLE_APOC;
-  const notificationPingsEnabled = process.env.NOTIFICATION_PINGS_APOC !== 'false';
+  const notificationPingsEnabled = process.env.NOTIFICATION_PINGS_APOC === 'true';
 
   if (process.env.DEBUG === 'true') {
     console.log('\x1b[36m[Apoc Config] Environment Variables:\x1b[0m');
-    console.log(`  NOTIFICATION_CHANNEL_APOC: ${notificationChannelId || '\x1b[90m(not set)\x1b[0m'}`);
-    console.log(`  NOTIFICATION_ROLE_APOC: ${notificationRoleId || '\x1b[90m(not set)\x1b[0m'}`);
+    console.log(`  CHANNEL_IDS_APOC: ${channelIds.join(', ')}`);
+    console.log(`  NOTIFICATION_CHANNEL_APOC: ${notificationChannelId ? '***' : '(not set)'}`);
+    console.log(`  NOTIFICATION_ROLE_APOC: ${notificationRoleId ? '***' : '(not set)'}`);
     console.log(`  NOTIFICATION_PINGS_APOC: ${notificationPingsEnabled ? 'true' : 'false'}`);
   }
 
@@ -34,7 +39,7 @@ export function getApocConfig(): BotConfig {
     activityRotationInterval: 30000,
     debug: process.env.DEBUG === 'true',
     gameName: 'MotorStorm Apocalypse',
-    apiEndpoint: 'http://api.psorg-web-revival.us:61921',
+    apiEndpoint: 'https://api.psrewired.com/us/api',
     dataKey: 'motorstorm_msa',
     notificationChannelId,
     notificationRoleId,

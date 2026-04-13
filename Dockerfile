@@ -1,38 +1,46 @@
-# MotorStorm Status Bots - Pterodactyl Compatible Dockerfile
+# MotorStorm Status Bots - Production Dockerfile
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files for build
+COPY package*.json tsconfig.json ./
+
+# Install ALL dependencies (including dev for build)
+RUN npm ci
+
+# Copy source
+COPY src ./src
+
+# Build TypeScript
+RUN npm run build
+
+# Production image
 FROM node:20-alpine
 
-# Install dumb-init for proper signal handling in containers
+# Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
-# Create app directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY tsconfig.json ./
 
-# Install dependencies
+# Install only production dependencies
 RUN npm ci --only=production
 
-# Copy source code
-COPY src ./src
+# Copy built output
+COPY --from=builder /app/dist ./dist
 
-# Build TypeScript to JavaScript
-RUN npm run build
-
-# Create non-root user for security
+# Create non-root user
 RUN addgroup -g 1000 botuser && \
     adduser -D -u 1000 -G botuser botuser && \
     chown -R botuser:botuser /app
 
-# Switch to non-root user
 USER botuser
 
-# Set environment to production
 ENV NODE_ENV=production
 
-# Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
 CMD ["node", "dist/index.js"]

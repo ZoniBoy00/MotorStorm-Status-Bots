@@ -1,39 +1,56 @@
 import { TextChannel, EmbedBuilder } from 'discord.js';
-import { MessageIdStore, ServerData } from '../types';
-import { promises as fs } from 'fs';
+import * as fs from 'fs';
 import * as path from 'path';
+import { MessageIdStore, ServerData } from '../types';
+import { Logger } from './logger';
 
 /**
- * Manages Discord message persistence across bot restarts
+ * Manages Discord message persistence across bot restarts using MySQL
  */
 export class MessageManager {
-  private messageIdsFile: string;
+  private botName: string;
   private messageIds: MessageIdStore = {};
+  private logger: Logger;
+  private dataDir: string;
+  private filePath: string;
 
   constructor(botName: string) {
-    this.messageIdsFile = path.join(__dirname, '..', '..', 'data', `${botName}_message_ids.json`);
+    this.botName = botName;
+    this.logger = new Logger(`${botName}-Messages`);
+    this.dataDir = path.join(process.cwd(), 'data');
+    this.filePath = path.join(this.dataDir, `${botName}_message_ids.json`);
   }
 
   /**
-   * Initialize message manager and load existing message IDs
+   * Initialize message manager and load existing message IDs from MySQL
    */
   async initialize(): Promise<void> {
     try {
-      // Ensure data directory exists
-      const dataDir = path.dirname(this.messageIdsFile);
-      await fs.mkdir(dataDir, { recursive: true });
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
+      }
 
-      // Load existing message IDs
-      try {
-        const fileContent = await fs.readFile(this.messageIdsFile, 'utf8');
-        this.messageIds = JSON.parse(fileContent);
-      } catch (error) {
-        // File doesn't exist yet, start with empty object
+      if (fs.existsSync(this.filePath)) {
+        const data = fs.readFileSync(this.filePath, 'utf-8');
+        if (data.trim()) {
+          this.messageIds = JSON.parse(data);
+          this.logger.info(`Loaded ${Object.keys(this.messageIds).length} message IDs from JSON for ${this.botName}`);
+        }
+      } else {
         this.messageIds = {};
+        this.saveToFile();
       }
     } catch (error) {
-      console.error('Error initializing message manager:', error);
+      this.logger.error('Error initializing message manager:', error instanceof Error ? error : new Error(String(error)));
       this.messageIds = {};
+    }
+  }
+
+  private saveToFile(): void {
+    try {
+      fs.writeFileSync(this.filePath, JSON.stringify(this.messageIds, null, 2));
+    } catch (error) {
+      this.logger.error('Error saving message IDs to JSON:', error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -51,9 +68,16 @@ export class MessageManager {
         const message = await channel.messages.fetch(this.messageIds[channel.id]);
         return message;
       } catch (error) {
-        console.error(`Error fetching message for channel ${channel.name}:`, error);
-        // Remove invalid message ID
-        delete this.messageIds[channel.id];
+        // Only delete from DB if it's a "Not Found" error (10008)
+        const discordError = error as any;
+        if (discordError.code === 10008) {
+          this.logger.warning(`Message for channel ${channel.name} was deleted. Creating new one.`);
+          delete this.messageIds[channel.id];
+          this.saveToFile();
+        } else {
+          this.logger.error(`Error fetching message in ${channel.name}: ${discordError.message}`);
+          return null;
+        }
       }
     }
 
@@ -62,26 +86,14 @@ export class MessageManager {
       const embed = formatEmbed(data);
       const message = await channel.send({ embeds: [embed] });
 
-      // Store the new message ID
+      // Store the new message ID in memory and JSON
       this.messageIds[channel.id] = message.id;
-      await this.saveMessageIds();
-
-      console.log(`Created new message ${message.id} in channel ${channel.name}`);
+      this.saveToFile();
+      this.logger.success(`Created and saved new status message in #${channel.name} (ID: ${message.id})`);
       return message;
     } catch (error) {
-      console.error(`Error creating message in channel ${channel.name}:`, error);
+      this.logger.error(`Error creating message in channel ${channel.name}:`, error instanceof Error ? error : new Error(String(error)));
       return null;
-    }
-  }
-
-  /**
-   * Save message IDs to file
-   */
-  private async saveMessageIds(): Promise<void> {
-    try {
-      await fs.writeFile(this.messageIdsFile, JSON.stringify(this.messageIds, null, 2));
-    } catch (error) {
-      console.error('Error saving message IDs:', error);
     }
   }
 }

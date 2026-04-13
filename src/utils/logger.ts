@@ -51,6 +51,7 @@ export class Logger {
       'MotorStorm-Apoc': colors.magenta,
       'MotorStorm-PR': colors.green,
       'MotorStorm-MV': colors.yellow,
+      'MotorStorm-Helper': colors.blue,
     };
     return colorMap[botName] || colors.white;
   }

@@ -38,10 +38,10 @@ export class MotorStormApocBot extends BaseBot {
   }
 
   protected getTotalPlayers(data: ServerData): number {
-    return data.motorstorm_msa.summary.total_players;
+    return data.motorstorm_apoc.summary.total_players;
   }
 
   protected getLobbies(data: ServerData): Lobby[] {
-    return data.motorstorm_msa.lobbies;
+    return data.motorstorm_apoc.lobbies;
   }
 }

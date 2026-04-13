@@ -1,0 +1,363 @@
+{
+  "_comment": "Pterodactyl Panel Egg Configuration for MotorStorm Status Bots",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "exported_at": "2024-01-01T00:00:00+00:00",
+  "name": "MotorStorm Status Bots",
+  "author": "ZoniBoy00@pm.me",
+  "description": "Discord status bots for MotorStorm servers (AE, Apoc, PR, MV) with multi-channel support and lobby notifications",
+  "features": null,
+  "docker_images": {
+    "ghcr.io/parkervcp/yolks:nodejs_20": "ghcr.io/parkervcp/yolks:nodejs_20"
+  },
+  "file_denylist": [],
+  "startup": "node dist/index.js",
+  "config": {
+    "from": null,
+    "files": "{\".env\": {\"parser\": \"properties\"}}",
+    "startup": "{\"done\": \"All configured bots are running!\"}",
+    "logs": "{\"0\": \"/var/log/pterodactyl/daemon.log\"}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\nset -e\n\ncd /mnt/server\n\nif [ \"${USER_UPLOAD}\" == \"true\" ] || [ \"${USER_UPLOAD}\" == \"1\" ]; then\n    echo \"Skipping installation - user uploaded files\"\n    exit 0\nfi\n\nif [ -n \"${GIT_REPO}\" ]; then\n    if [ -d .git ]; then\n        echo \"Updating git repository...\"\n        git pull\n    else\n        echo \"Cloning repository: ${GIT_REPO}\"\n        if [ -n \"${GIT_BRANCH}\" ]; then\n            git clone --single-branch --branch ${GIT_REPO} .\n        else\n            git clone ${GIT_REPO} .\n        fi\n    fi\nfi\n\nif [ -f package.json ]; then\n    echo \"Installing npm dependencies...\"\n    npm ci\n    echo \"Building TypeScript...\"\n    npm run build\n    echo \"Installation complete!\"\nelse\n    echo \"Error: package.json not found!\"\n    exit 1\nfi",
+      "container": "ghcr.io/parkervcp/installers:debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Discord Token - Arctic Edge",
+      "description": "Discord bot token for MotorStorm Arctic Edge bot",
+      "env_variable": "DISCORD_TOKEN_AE",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Discord Token - Apocalypse",
+      "description": "Discord bot token for MotorStorm Apocalypse bot",
+      "env_variable": "DISCORD_TOKEN_APOC",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Discord Token - Pacific Rift",
+      "description": "Discord bot token for MotorStorm Pacific Rift bot",
+      "env_variable": "DISCORD_TOKEN_PR",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Discord Token - Monument Valley",
+      "description": "Discord bot token for MotorStorm Monument Valley bot",
+      "env_variable": "DISCORD_TOKEN_MV",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Discord Token - Helper (Analytics)",
+      "description": "Discord bot token for the Helper/Analytics bot",
+      "env_variable": "DISCORD_TOKEN_HELPER",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Channel IDs - Arctic Edge",
+      "description": "Comma-separated Discord channel IDs for status updates",
+      "env_variable": "CHANNEL_IDS_AE",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Channel IDs - Apocalypse",
+      "description": "Comma-separated Discord channel IDs for status updates",
+      "env_variable": "CHANNEL_IDS_APOC",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Channel IDs - Pacific Rift",
+      "description": "Comma-separated Discord channel IDs for status updates",
+      "env_variable": "CHANNEL_IDS_PR",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Channel IDs - Monument Valley",
+      "description": "Comma-separated Discord channel IDs for status updates",
+      "env_variable": "CHANNEL_IDS_MV",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Channel - Arctic Edge",
+      "description": "Channel ID for lobby notifications (leave empty to disable)",
+      "env_variable": "NOTIFICATION_CHANNEL_AE",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Channel - Apocalypse",
+      "description": "Channel ID for lobby notifications (leave empty to disable)",
+      "env_variable": "NOTIFICATION_CHANNEL_APOC",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Channel - Pacific Rift",
+      "description": "Channel ID for lobby notifications (leave empty to disable)",
+      "env_variable": "NOTIFICATION_CHANNEL_PR",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Channel - Monument Valley",
+      "description": "Channel ID for lobby notifications (leave empty to disable)",
+      "env_variable": "NOTIFICATION_CHANNEL_MV",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Role - Arctic Edge",
+      "description": "Role ID to mention in notifications (leave empty to disable)",
+      "env_variable": "NOTIFICATION_ROLE_AE",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Role - Apocalypse",
+      "description": "Role ID to mention in notifications (leave empty to disable)",
+      "env_variable": "NOTIFICATION_ROLE_APOC",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Role - Pacific Rift",
+      "description": "Role ID to mention in notifications (leave empty to disable)",
+      "env_variable": "NOTIFICATION_ROLE_PR",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Role - Monument Valley",
+      "description": "Role ID to mention in notifications (leave empty to disable)",
+      "env_variable": "NOTIFICATION_ROLE_MV",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Pings - Arctic Edge",
+      "description": "Enable @mention pings (default: false)",
+      "env_variable": "NOTIFICATION_PINGS_AE",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Pings - Apocalypse",
+      "description": "Enable @mention pings (default: false)",
+      "env_variable": "NOTIFICATION_PINGS_APOC",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Pings - Pacific Rift",
+      "description": "Enable @mention pings (default: false)",
+      "env_variable": "NOTIFICATION_PINGS_PR",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "field_type": "text"
+    },
+    {
+      "name": "Notification Pings - Monument Valley",
+      "description": "Enable @mention pings (default: false)",
+      "env_variable": "NOTIFICATION_PINGS_MV",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "field_type": "text"
+    },
+    {
+      "name": "Git Repository",
+      "description": "Git repository URL to clone (leave empty if uploading files)",
+      "env_variable": "GIT_REPO",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Git Branch",
+      "description": "Git branch to clone",
+      "env_variable": "GIT_BRANCH",
+      "default_value": "main",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Update",
+      "description": "Automatically pull latest changes on startup",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|boolean",
+      "field_type": "text"
+    },
+    {
+      "name": "User Upload",
+      "description": "Skip installation if files were uploaded manually",
+      "env_variable": "USER_UPLOAD",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|boolean",
+      "field_type": "text"
+    },
+    {
+      "name": "Debug Mode",
+      "description": "Enable debug logging",
+      "env_variable": "DEBUG",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "field_type": "text"
+    },
+    {
+      "name": "MySQL Host",
+      "description": "Database host",
+      "env_variable": "MYSQL_HOST",
+      "default_value": "localhost",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string",
+      "field_type": "text"
+    },
+    {
+      "name": "MySQL Port",
+      "description": "Database port",
+      "env_variable": "MYSQL_PORT",
+      "default_value": "3306",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string",
+      "field_type": "text"
+    },
+    {
+      "name": "MySQL User",
+      "description": "Database username",
+      "env_variable": "MYSQL_USER",
+      "default_value": "root",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string",
+      "field_type": "text"
+    },
+    {
+      "name": "MySQL Password",
+      "description": "Database password",
+      "env_variable": "MYSQL_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "MySQL Database",
+      "description": "Database name",
+      "env_variable": "MYSQL_DATABASE",
+      "default_value": "motorstorm_stats",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Discord Client ID",
+      "description": "Discord Application Client ID (for command deployment)",
+      "env_variable": "DISCORD_CLIENT_ID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Discord Guild ID",
+      "description": "Server ID for development mode (faster command updates)",
+      "env_variable": "DISCORD_GUILD_ID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    }
+  ]
+}

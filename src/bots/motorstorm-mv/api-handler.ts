@@ -44,24 +44,39 @@ export class MVApiHandler extends ApiClient {
   private parsePlayerName(name: string | null | undefined): string {
     if (!name) return 'Unknown';
 
-    // Handle format like "fffff7fb-ZoniBoy0"
-    if (name.includes('-')) {
-      return name.split('-')[1].trim();
+    // Handle format like "fffff7fb-ZoniBoy0" or "0-ZoniBoy0"
+    // The name is always after the first dash if there is one and it's a hex prefix
+    const dashIndex = name.indexOf('-');
+    if (dashIndex !== -1) {
+      const prefix = name.substring(0, dashIndex);
+      // Check if prefix looks like a hex/number (PSR prefix)
+      if (/^[0-9a-f]+$/i.test(prefix)) {
+        return name.substring(dashIndex + 1).trim();
+      }
     }
 
-    // Handle format with hex prefix
-    const match = name.match(/[0-9a-f]+-(.+)/i);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-
-    // Handle format with just hex prefix without dash
+    // Fallback: handle format with just hex prefix without dash (8+ chars)
     const hexPrefixMatch = name.match(/^[0-9a-f]{8,}(.+)/i);
     if (hexPrefixMatch && hexPrefixMatch[1]) {
       return hexPrefixMatch[1].trim();
     }
 
     return name.trim();
+  }
+
+  /**
+   * Parse lobby configuration from room name
+   */
+  private parseLobbyConfig(roomName: string): any {
+    if (!roomName.includes('~')) return null;
+
+    const parts = roomName.split('~').map(part => part.trim());
+    return {
+      gameMode: parts[0] || null,
+      track: parts[1] || null,
+      lapCount: parts[2] || null,
+      direction: parts[3] || null,
+    };
   }
 
   /**
@@ -110,6 +125,7 @@ export class MVApiHandler extends ApiClient {
               max_players: lobbyMaxPlayers,
               players: lobbyPlayers,
               is_active: lobbyPlayerCount > 0,
+              config: this.parseLobbyConfig(lobbyName),
             });
           }
         } else if (
@@ -128,6 +144,7 @@ export class MVApiHandler extends ApiClient {
             max_players: roomPlayersData.maxPlayers || maxPlayers,
             players: lobbyPlayers,
             is_active: (roomPlayersData.playerCount || playerCount) > 0,
+            config: this.parseLobbyConfig(roomPlayersData.name || baseRoomName),
           });
         } else if (playerCount === 0) {
           // Empty room
@@ -165,23 +182,27 @@ export class MVApiHandler extends ApiClient {
       const [mvRoomsData, mvPlayersData, mvUniverseData] = await Promise.all([
         this.fetchWithRetry<PSRRoom[]>(
           `${this.BASE_URL}/rooms?applicationId=${this.APP_ID}`
-        ),
+        ).catch(() => [] as PSRRoom[]),
         this.fetchWithRetry<PSRPlayer[]>(
           `${this.BASE_URL}/universes/players?applicationId=${this.APP_ID}`
-        ),
+        ).catch(() => [] as PSRPlayer[]),
         this.fetchWithRetry<PSRUniverse[]>(
           `${this.BASE_URL}/universes?applicationId=${this.APP_ID}`
-        ),
+        ).catch(() => [] as PSRUniverse[]),
       ]);
 
-      if (!mvRoomsData || !mvPlayersData || !mvUniverseData) {
+      if (!mvRoomsData && !mvPlayersData) {
         return null;
       }
 
-      const parsedPlayers = mvPlayersData.map((player) => this.parsePlayerName(player.name));
-      const universeInfo = mvUniverseData[0];
+      const rooms = mvRoomsData || [];
+      const players = mvPlayersData || [];
+      const universeInfo = (mvUniverseData && mvUniverseData.length > 0)
+        ? mvUniverseData[0]
+        : { name: 'MotorStorm NTSC' };
 
-      const mvLobbies = await this.processRooms(mvRoomsData, parsedPlayers, false);
+      const parsedPlayers = players.map((player) => this.parsePlayerName(player.name));
+      const mvLobbies = await this.processRooms(rooms, parsedPlayers, false);
 
       const uniquePlayers = [...new Set(parsedPlayers)];
       const totalPlayers = uniquePlayers.length;

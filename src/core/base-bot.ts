@@ -23,29 +23,28 @@ export abstract class BaseBot {
     this.config = config;
     this.logger = new Logger(botName);
     this.messageManager = new MessageManager(botName);
-    
+
     this.notificationManager = new NotificationManager(
       botName,
       config.notificationChannelId,
       config.notificationRoleId,
-      config.notificationPingsEnabled ?? true
+      config.notificationPingsEnabled ?? false
     );
 
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions,
       ],
     });
 
     this.activities = this.getActivities();
-    
+
     this.readyPromise = new Promise((resolve) => {
       this.readyResolve = resolve;
     });
-    
+
     this.setupEventHandlers();
   }
 
@@ -98,15 +97,18 @@ export abstract class BaseBot {
       this.logger.info(`Available channels: ${channels}`);
     }
 
-    // Initialize message manager
-    await this.messageManager.initialize();
+    // Initialize managers
+    await Promise.all([
+      this.messageManager.initialize(),
+      this.notificationManager.initialize()
+    ]);
 
     await this.checkServerStatus();
 
     // Start intervals
     this.startStatusChecks();
     this.startActivityRotation();
-    
+
     if (this.readyResolve) {
       this.readyResolve();
     }
@@ -184,12 +186,12 @@ export abstract class BaseBot {
 
       // Check for new lobbies and send notifications
       const lobbies = this.getLobbies(data);
-      
+
       if (this.config.notificationChannelId) {
         const notificationChannel = this.client.channels.cache.get(
           this.config.notificationChannelId
         ) as TextChannel;
-        
+
         if (notificationChannel) {
           await this.notificationManager.checkForNewLobbies(lobbies, notificationChannel);
         } else if (lobbies.length > 0 && this.config.debug) {

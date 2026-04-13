@@ -2,27 +2,29 @@ import { ApiClient } from '../../core';
 import { ServerData, Lobby } from '../../types';
 
 /**
- * Types specific to MotorStorm Apocalypse API
+ * Types for PSRewired API (shared with PR and MV bots)
  */
-interface ApocClient {
-  Name?: string;
-  PlayerName?: string;
+interface PSRPlayer {
+  name: string;
 }
 
-interface ApocGameSession {
-  Name?: string;
-  Clients?: ApocClient[];
-  PlayerCount?: number;
+interface PSRRoom {
+  id: number | string;
+  name?: string;
+  playerCount?: number;
+  maxPlayers?: number;
 }
 
-interface ApocWorld {
-  WorldId?: string | number;
-  GameSessions?: ApocGameSession[];
+interface PSRRoomDetail {
+  name?: string;
+  playerCount?: number;
+  maxPlayers?: number;
+  players?: PSRPlayer[];
 }
 
-interface ApocEntry {
-  AppId: string | number;
-  Worlds?: ApocWorld[];
+interface PSRUniverse {
+  name?: string;
+  playerCount?: number;
 }
 
 /**
@@ -30,77 +32,146 @@ interface ApocEntry {
  */
 export class ApocApiHandler extends ApiClient {
   private readonly APP_ID = '22500';
-  private readonly API_URL = 'http://api.psorg-web-revival.us:61921/GetRooms/';
+  private readonly BASE_URL = 'https://api.psrewired.com/us/api';
 
   constructor() {
     super('MotorStorm-Apoc');
   }
 
   /**
-   * Remove UUID prefixes from strings (e.g., "fffff7fb-ZoniBoy0" -> "ZoniBoy0")
-   */
-  private removeUuidPrefix(str: string | null | undefined): string {
-    if (!str || typeof str !== 'string') return '';
-
-    const uuidPrefixMatch = str.match(/^[0-9a-f]+-/i);
-    if (uuidPrefixMatch) {
-      return str.substring(uuidPrefixMatch[0].length).trim();
-    }
-
-    return str.trim();
-  }
-
-  /**
-   * Parse player name by removing UUID prefixes
+   * Parse player name by removing numeric prefixes and special characters
    */
   private parsePlayerName(name: string | null | undefined): string {
-    return this.removeUuidPrefix(name);
-  }
+    if (!name) return 'Unknown';
 
-  /**
-   * Process game sessions into lobby information
-   */
-  private processGameSessions(gameSessions: any[]): Lobby[] {
-    if (!gameSessions || gameSessions.length === 0) {
-      return [];
+    // Handle format like "fffff7fb-ZoniBoy0" or "0-ZoniBoy0"
+    // The name is always after the first dash if there is one and it's a hex prefix
+    const dashIndex = name.indexOf('-');
+    if (dashIndex !== -1) {
+      const prefix = name.substring(0, dashIndex);
+      // Check if prefix looks like a hex/number (PSR prefix)
+      if (/^[0-9a-f]+$/i.test(prefix)) {
+        return name.substring(dashIndex + 1).trim();
+      }
     }
 
-    return gameSessions.map((session) => {
-      let sessionName = session.Name || `Game Session (World ${session.WorldId})`;
-      sessionName = this.removeUuidPrefix(sessionName);
+    // Fallback: handle format with just hex prefix without dash (8+ chars)
+    const hexPrefixMatch = name.match(/^[0-9a-f]{8,}(.+)/i);
+    if (hexPrefixMatch && hexPrefixMatch[1]) {
+      return hexPrefixMatch[1].trim();
+    }
 
-      const playerCount = session.Players ? session.Players.length : session.PlayerCount || 0;
-      const maxPlayers = 16;
-      const isActive = playerCount > 0;
-
-      return {
-        name: sessionName,
-        player_count: playerCount,
-        max_players: maxPlayers,
-        players: session.Players || [],
-        is_active: isActive,
-      };
-    });
+    return name.trim();
   }
 
   /**
-   * Create an empty response for when the server is offline
+   * Parse lobby configuration from room name
    */
-  private createEmptyResponse(): ServerData {
+  private parseLobbyConfig(roomName: string): any {
+    if (!roomName.includes('~')) return null;
+
+    const parts = roomName.split('~').map(p => p.trim());
     return {
-      motorstorm_msa: {
-        general_lobby: {
-          name: 'MotorStorm Apocalypse',
-          player_count: 0,
-          players: [],
-        },
-        lobbies: [],
-        summary: {
-          active_lobbies: 0,
-          total_players: 0,
-        },
-      },
+      gameMode: parts[0] || null,
+      track: parts[1] || null,
+      lapCount: parts[2] || null,
+      direction: parts[3] || null,
     };
+  }
+
+  /**
+   * Process rooms data and extract lobby information
+   */
+  private async processRooms(
+    roomsData: PSRRoom[],
+    _allPlayers: string[],
+    _debug: boolean = false
+  ): Promise<Lobby[]> {
+    const lobbies: Lobby[] = [];
+
+    for (const room of roomsData) {
+      try {
+        const roomId = room.id;
+        const baseRoomName = room.name || 'Unknown Lobby';
+        const playerCount = room.playerCount || 0;
+        const maxPlayers = room.maxPlayers || 16;
+
+        // Fetch player data for this specific room
+        const roomPlayersData = await this.fetchWithRetry<PSRRoomDetail[] | PSRRoomDetail>(
+          `${this.BASE_URL}/rooms/${roomId}`
+        );
+
+        if (!roomPlayersData) {
+          continue;
+        }
+
+        // Handle the case where the room contains multiple sub-lobbies
+        if (Array.isArray(roomPlayersData) && roomPlayersData.length > 0) {
+          for (const subLobby of roomPlayersData) {
+            const lobbyName = subLobby.name || baseRoomName;
+            const lobbyPlayerCount = subLobby.playerCount || 0;
+            const lobbyMaxPlayers = subLobby.maxPlayers || maxPlayers;
+
+            let lobbyPlayers: string[] = [];
+            if (subLobby.players && Array.isArray(subLobby.players)) {
+              lobbyPlayers = subLobby.players.map((player) =>
+                this.parsePlayerName(player.name)
+              );
+            }
+
+            lobbies.push({
+              name: lobbyName,
+              player_count: lobbyPlayerCount,
+              max_players: lobbyMaxPlayers,
+              players: lobbyPlayers,
+              is_active: lobbyPlayerCount > 0,
+              config: this.parseLobbyConfig(lobbyName),
+            });
+          }
+        } else if (
+          typeof roomPlayersData === 'object' &&
+          !Array.isArray(roomPlayersData) &&
+          roomPlayersData.players
+        ) {
+          // Single lobby format
+          const lobbyPlayers = roomPlayersData.players.map((player) =>
+            this.parsePlayerName(player.name)
+          );
+
+          lobbies.push({
+            name: roomPlayersData.name || baseRoomName,
+            player_count: roomPlayersData.playerCount || playerCount,
+            max_players: roomPlayersData.maxPlayers || maxPlayers,
+            players: lobbyPlayers,
+            is_active: (roomPlayersData.playerCount || playerCount) > 0,
+            config: this.parseLobbyConfig(roomPlayersData.name || baseRoomName),
+          });
+        } else if (playerCount === 0) {
+          // Empty room
+          lobbies.push({
+            name: baseRoomName,
+            player_count: 0,
+            max_players: maxPlayers,
+            players: [],
+            is_active: false,
+          });
+        }
+      } catch (error) {
+        const err = error as Error;
+        console.error(`Error processing room with ID ${room.id}: ${err.message}`);
+
+        // Still add the lobby even if we can't fetch detailed player info
+        lobbies.push({
+          name: room.name || 'Unknown Lobby',
+          player_count: room.playerCount || 0,
+          max_players: room.maxPlayers || 16,
+          players: [],
+          is_active: (room.playerCount || 0) > 0,
+        });
+      }
+    }
+
+    return lobbies;
   }
 
   /**
@@ -108,67 +179,44 @@ export class ApocApiHandler extends ApiClient {
    */
   async fetchData(): Promise<ServerData | null> {
     try {
-      const response = await this.fetchWithRetry<ApocEntry[]>(this.API_URL);
-      if (!response) {
-        return this.createEmptyResponse();
+      const [apocRoomsData, apocPlayersData, apocUniverseData] = await Promise.all([
+        this.fetchWithRetry<PSRRoom[]>(
+          `${this.BASE_URL}/rooms?applicationId=${this.APP_ID}`
+        ).catch(() => [] as PSRRoom[]),
+        this.fetchWithRetry<PSRPlayer[]>(
+          `${this.BASE_URL}/universes/players?applicationId=${this.APP_ID}`
+        ).catch(() => [] as PSRPlayer[]),
+        this.fetchWithRetry<PSRUniverse[]>(
+          `${this.BASE_URL}/universes?applicationId=${this.APP_ID}`
+        ).catch(() => [] as PSRUniverse[]),
+      ]);
+
+      if (!apocRoomsData && !apocPlayersData) {
+        return null;
       }
 
-      const msaEntry = response.find(
-        (entry) => entry.AppId === this.APP_ID || entry.AppId === 22500
-      );
+      const rooms = apocRoomsData || [];
+      const players = apocPlayersData || [];
+      const universeInfo = (apocUniverseData && apocUniverseData.length > 0)
+        ? apocUniverseData[0]
+        : { name: 'MotorStorm Apocalypse' };
 
-      if (!msaEntry) {
-        return this.createEmptyResponse();
-      }
+      const parsedPlayers = players.map((player) => this.parsePlayerName(player.name));
+      const apocLobbies = await this.processRooms(rooms, parsedPlayers, false);
 
-      const worlds = msaEntry.Worlds || [];
-      const allGameSessions: any[] = [];
-      let allPlayers: string[] = [];
-
-      worlds.forEach((world) => {
-        const worldId = world.WorldId || 'Unknown';
-        const gameSessions = world.GameSessions || [];
-
-        gameSessions.forEach((session) => {
-          const processedSession: any = {
-            ...session,
-            WorldId: worldId,
-            PlayerCount: 0,
-            Players: [],
-          };
-
-          if (session.Clients && Array.isArray(session.Clients)) {
-            const sessionPlayers = session.Clients.map((client) => {
-              const name = client.Name || client.PlayerName || '';
-              return this.parsePlayerName(name);
-            }).filter((name) => name);
-
-            processedSession.Players = sessionPlayers;
-            processedSession.PlayerCount = sessionPlayers.length;
-            allPlayers = allPlayers.concat(sessionPlayers);
-          }
-
-          allGameSessions.push(processedSession);
-        });
-      });
-
-      allPlayers = [...new Set(allPlayers)].filter((name) => name);
-
-      const lobbies = this.processGameSessions(allGameSessions);
-
-      const totalPlayers = allPlayers.length;
-      const activeLobbies = lobbies.filter((lobby) => lobby.is_active).length;
+      const uniquePlayers = [...new Set(parsedPlayers)];
+      const totalPlayers = uniquePlayers.length;
 
       return {
-        motorstorm_msa: {
+        motorstorm_apoc: {
           general_lobby: {
-            name: 'MotorStorm Apocalypse',
-            player_count: totalPlayers,
-            players: allPlayers,
+            name: universeInfo.name || 'MotorStorm Apocalypse',
+            player_count: uniquePlayers.length,
+            players: uniquePlayers,
           },
-          lobbies,
+          lobbies: apocLobbies,
           summary: {
-            active_lobbies: activeLobbies,
+            active_lobbies: apocLobbies.filter((lobby) => lobby.is_active).length,
             total_players: totalPlayers,
           },
         },
@@ -176,7 +224,7 @@ export class ApocApiHandler extends ApiClient {
     } catch (error) {
       const err = error as Error;
       console.error('Error fetching server data:', err.message);
-      return this.createEmptyResponse();
+      return null;
     }
   }
 }

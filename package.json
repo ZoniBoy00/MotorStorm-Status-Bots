@@ -1,6 +1,6 @@
 {
   "name": "motorstorm-status-bots",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "TypeScript Discord bots for monitoring MotorStorm server status with lobby notifications",
   "main": "dist/index.js",
   "scripts": {
@@ -11,6 +11,8 @@
     "start:apoc": "ts-node src/bots/motorstorm-apoc/index.ts",
     "start:pr": "ts-node src/bots/motorstorm-pr/index.ts",
     "start:mv": "ts-node src/bots/motorstorm-mv/index.ts",
+    "migrate": "ts-node src/scripts/migrate-to-mysql.ts",
+    "deploy": "ts-node src/scripts/deploy-commands.ts",
     "clean": "rm -rf dist",
     "watch": "tsc --watch"
   },
@@ -26,16 +28,17 @@
   "author": "ZoniBoy00",
   "license": "MIT",
   "dependencies": {
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.3.1",
-    "axios": "^1.6.2",
+    "axios": "^1.15.0",
+    "discord.js": "^14.26.2",
+    "dotenv": "^17.4.2",
+    "mysql2": "^3.22.0",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
-    "@types/node": "^20.10.5",
+    "@types/node": "^25.6.0",
     "@types/xml2js": "^0.4.14",
-    "typescript": "^5.3.3",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
   },
   "engines": {
     "node": ">=18.0.0",

@@ -1,7 +1,4 @@
 import { BotConfig } from '../../types';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
 
 /**
  * Configuration for MotorStorm Monument Valley bot
@@ -12,18 +9,26 @@ export function getMVConfig(): BotConfig {
     throw new Error('DISCORD_TOKEN_MV environment variable is required');
   }
 
-  const channelIds = process.env.CHANNEL_IDS_MV
-    ? process.env.CHANNEL_IDS_MV.split(',').map((id) => id.trim())
-    : ['1358455464299335822'];
+  const channelIdsEnv = process.env.CHANNEL_IDS_MV;
+  if (!channelIdsEnv) {
+    throw new Error('CHANNEL_IDS_MV environment variable is required (comma-separated channel IDs)');
+  }
+
+  const channelIds = channelIdsEnv.split(',').map((id) => id.trim()).filter(Boolean);
+
+  if (channelIds.length === 0) {
+    throw new Error('CHANNEL_IDS_MV must contain at least one channel ID');
+  }
 
   const notificationChannelId = process.env.NOTIFICATION_CHANNEL_MV;
   const notificationRoleId = process.env.NOTIFICATION_ROLE_MV;
-  const notificationPingsEnabled = process.env.NOTIFICATION_PINGS_MV !== 'false';
+  const notificationPingsEnabled = process.env.NOTIFICATION_PINGS_MV === 'true';
 
   if (process.env.DEBUG === 'true') {
     console.log('\x1b[36m[MV Config] Environment Variables:\x1b[0m');
-    console.log(`  NOTIFICATION_CHANNEL_MV: ${notificationChannelId || '\x1b[90m(not set)\x1b[0m'}`);
-    console.log(`  NOTIFICATION_ROLE_MV: ${notificationRoleId || '\x1b[90m(not set)\x1b[0m'}`);
+    console.log(`  CHANNEL_IDS_MV: ${channelIds.join(', ')}`);
+    console.log(`  NOTIFICATION_CHANNEL_MV: ${notificationChannelId ? '***' : '(not set)'}`);
+    console.log(`  NOTIFICATION_ROLE_MV: ${notificationRoleId ? '***' : '(not set)'}`);
     console.log(`  NOTIFICATION_PINGS_MV: ${notificationPingsEnabled ? 'true' : 'false'}`);
   }
 

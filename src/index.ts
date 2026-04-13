@@ -3,6 +3,7 @@ import { MotorStormApocBot } from './bots/motorstorm-apoc';
 import { MotorStormPRBot } from './bots/motorstorm-pr';
 import { MotorStormMVBot } from './bots/motorstorm-mv';
 import { HelperBot } from './bots/motorstorm-helper/bot';
+import { Database } from './utils/database';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -29,6 +30,16 @@ async function main() {
   console.log(`\n${colors.bright}${colors.cyan}╔═══════════════════════════════════════════════════════╗${colors.reset}`);
   console.log(`${colors.bright}${colors.cyan}║   MotorStorm Status Bots - Unified Launcher v2.2      ║${colors.reset}`);
   console.log(`${colors.bright}${colors.cyan}╚═══════════════════════════════════════════════════════╝${colors.reset}\n`);
+
+  console.log(`${colors.dim}Initializing database...${colors.reset}`);
+  try {
+    await Database.init();
+    console.log(`${colors.green}Database connected successfully${colors.reset}`);
+  } catch (error) {
+    console.error(`${colors.red}Failed to initialize database: ${(error as Error).message}${colors.reset}`);
+    console.error(`${colors.dim}Note: Some features may not work without database${colors.reset}`);
+  }
+  console.log('');
 
   const bots: Array<{ name: string; instance: any }> = [];
   const errors: Array<{ name: string; error: Error }> = [];
@@ -105,10 +116,13 @@ async function main() {
 
   process.on('unhandledRejection', (reason) => {
     console.error(`${colors.red}⚠️  Unhandled Promise Rejection:${colors.reset}`, reason);
+    console.error(`${colors.dim}The bot will continue running, but please check for issues.${colors.reset}`);
   });
 
   process.on('uncaughtException', (error) => {
     console.error(`${colors.red}⚠️  Uncaught Exception:${colors.reset}`, error);
+    console.error(`${colors.red}Shutting down gracefully...${colors.reset}`);
+    process.exit(1);
   });
 }
 

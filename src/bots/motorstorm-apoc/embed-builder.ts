@@ -5,12 +5,12 @@ import { ServerData } from '../../types';
  * Build Discord embed for MotorStorm Apocalypse status
  */
 export function buildApocEmbed(data: ServerData): EmbedBuilder {
-  const msaData = data.motorstorm_msa;
+  const msaData = data.motorstorm_apoc;
 
   const embed = new EmbedBuilder()
     .setTitle('MotorStorm: Apocalypse')
     .setDescription(
-      `> Real-time server status and player activity\n> [View Server Dashboard](http://www.psorg-web-revival.us:15000/)`
+      `> Real-time server status and player activity\n> [View Server Dashboard](https://psrewired.com/servers/22500)`
     )
     .setColor('#ce5c2b')
     .setTimestamp(new Date())

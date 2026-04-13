@@ -1,7 +1,4 @@
 import { BotConfig } from '../../types';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
 
 /**
  * Configuration for MotorStorm Pacific Rift bot
@@ -12,18 +9,26 @@ export function getPRConfig(): BotConfig {
     throw new Error('DISCORD_TOKEN_PR environment variable is required');
   }
 
-  const channelIds = process.env.CHANNEL_IDS_PR
-    ? process.env.CHANNEL_IDS_PR.split(',').map((id) => id.trim())
-    : ['1358455464299335822'];
+  const channelIdsEnv = process.env.CHANNEL_IDS_PR;
+  if (!channelIdsEnv) {
+    throw new Error('CHANNEL_IDS_PR environment variable is required (comma-separated channel IDs)');
+  }
+
+  const channelIds = channelIdsEnv.split(',').map((id) => id.trim()).filter(Boolean);
+
+  if (channelIds.length === 0) {
+    throw new Error('CHANNEL_IDS_PR must contain at least one channel ID');
+  }
 
   const notificationChannelId = process.env.NOTIFICATION_CHANNEL_PR;
   const notificationRoleId = process.env.NOTIFICATION_ROLE_PR;
-  const notificationPingsEnabled = process.env.NOTIFICATION_PINGS_PR !== 'false';
+  const notificationPingsEnabled = process.env.NOTIFICATION_PINGS_PR === 'true';
 
   if (process.env.DEBUG === 'true') {
     console.log('\x1b[36m[PR Config] Environment Variables:\x1b[0m');
-    console.log(`  NOTIFICATION_CHANNEL_PR: ${notificationChannelId || '\x1b[90m(not set)\x1b[0m'}`);
-    console.log(`  NOTIFICATION_ROLE_PR: ${notificationRoleId || '\x1b[90m(not set)\x1b[0m'}`);
+    console.log(`  CHANNEL_IDS_PR: ${channelIds.join(', ')}`);
+    console.log(`  NOTIFICATION_CHANNEL_PR: ${notificationChannelId ? '***' : '(not set)'}`);
+    console.log(`  NOTIFICATION_ROLE_PR: ${notificationRoleId ? '***' : '(not set)'}`);
     console.log(`  NOTIFICATION_PINGS_PR: ${notificationPingsEnabled ? 'true' : 'false'}`);
   }
 
