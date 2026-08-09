@@ -459,7 +459,7 @@ export class CommandHandlers {
             .addFields(
                 {
                     name: '⏱️ Total Playtime',
-                    value: `**${this.formatTime(totalPlaytime)}**\n*Avg: ${this.formatTime(averages.players.averagePlaytimePerPlayer)}*`,
+                    value: `**${this.formatTime(totalPlaytime)}**`,
                     inline: true
                 },
                 {

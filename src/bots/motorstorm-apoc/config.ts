@@ -1,4 +1,20 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { BotConfig } from '../../types';
+
+const DATA_DIR = path.join(process.cwd(), 'data');
+const RUNTIME_CONFIG_FILE = path.join(DATA_DIR, 'runtime-channels.json');
+
+interface RuntimeChannels {
+  [key: string]: string[];
+}
+
+function loadRuntimeChannels(): RuntimeChannels {
+  if (fs.existsSync(RUNTIME_CONFIG_FILE)) {
+    return JSON.parse(fs.readFileSync(RUNTIME_CONFIG_FILE, 'utf-8'));
+  }
+  return {};
+}
 
 /**
  * Configuration for MotorStorm Apocalypse bot
@@ -9,16 +25,22 @@ export function getApocConfig(): BotConfig {
     throw new Error('DISCORD_TOKEN_APOC environment variable is required');
   }
 
+  let channelIds: string[] = [];
   const channelIdsEnv = process.env.CHANNEL_IDS_APOC;
-  if (!channelIdsEnv) {
+  if (channelIdsEnv) {
+    channelIds = channelIdsEnv.split(',').map((id) => id.trim()).filter(Boolean);
+  }
+
+  const runtimeChannels = loadRuntimeChannels();
+  if (runtimeChannels['apoc']) {
+    channelIds = [...channelIds, ...runtimeChannels['apoc']];
+  }
+
+  if (channelIds.length === 0) {
     throw new Error('CHANNEL_IDS_APOC environment variable is required (comma-separated channel IDs)');
   }
 
-  const channelIds = channelIdsEnv.split(',').map((id) => id.trim()).filter(Boolean);
-
-  if (channelIds.length === 0) {
-    throw new Error('CHANNEL_IDS_APOC must contain at least one channel ID');
-  }
+  channelIds = [...new Set(channelIds)];
 
   const notificationChannelId = process.env.NOTIFICATION_CHANNEL_APOC;
   const notificationRoleId = process.env.NOTIFICATION_ROLE_APOC;

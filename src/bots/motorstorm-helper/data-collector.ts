@@ -25,6 +25,13 @@ export class DataCollector {
   private gameModeStats: Map<string, GameModeStats> = new Map();
   private socialConnections: Map<string, SocialStats> = new Map();
 
+  /** Keep only this many session records in memory (DB holds full history). */
+  private static readonly MAX_IN_MEMORY_SESSIONS = 5000;
+  /** Lobbies not seen within this window are pruned from memory. */
+  private static readonly LOBBY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+  /** Players not seen within this window are pruned from memory. */
+  private static readonly PLAYER_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
   constructor() {
     this.logger = new Logger('DataCollector');
   }
@@ -197,7 +204,39 @@ export class DataCollector {
     await this.recordPlayerActivity('pr', prData.players);
     await this.recordPlayerActivity('mv', mvData.players);
 
+    this.pruneStaleData();
+
     await this.syncToDatabase();
+  }
+
+  /**
+   * Bound in-memory analytics structures so a long-running process cannot
+   * grow without limit (the DB keeps the full history). Called after each
+   * collection cycle.
+   */
+  private pruneStaleData(): void {
+    const now = Date.now();
+
+    // Drop lobbies not seen within the TTL window.
+    for (const [key, analytics] of Array.from(this.lobbyTracking.entries())) {
+      if (now - analytics.lastSeen > DataCollector.LOBBY_TTL_MS) {
+        this.lobbyTracking.delete(key);
+      }
+    }
+
+    // Drop players not seen within the TTL window.
+    for (const [player, stats] of Array.from(this.playerStats.entries())) {
+      if (now - stats.lastSeen > DataCollector.PLAYER_TTL_MS) {
+        this.playerStats.delete(player);
+      }
+    }
+
+    // Keep social connections in sync with the player registry.
+    for (const [player] of Array.from(this.socialConnections.entries())) {
+      if (!this.playerStats.has(player)) {
+        this.socialConnections.delete(player);
+      }
+    }
   }
 
   private trackLobbies(
@@ -297,6 +336,11 @@ export class DataCollector {
         if (duration >= 1) {
           const sessionRecord: SessionRecord = { playerName: player, game: session.game, sessionStart: session.start, sessionEnd: now, duration };
           this.sessionRecords.push(sessionRecord);
+          // Bound the in-memory array (the DB keeps the full history) so a
+          // long-running process cannot grow without limit.
+          if (this.sessionRecords.length > DataCollector.MAX_IN_MEMORY_SESSIONS) {
+            this.sessionRecords.splice(0, this.sessionRecords.length - DataCollector.MAX_IN_MEMORY_SESSIONS);
+          }
           Database.query('INSERT INTO sessions (player_name, game, session_start, session_end, duration) VALUES (?, ?, ?, ?, ?)', [sessionRecord.playerName, sessionRecord.game, sessionRecord.sessionStart, sessionRecord.sessionEnd, sessionRecord.duration]).catch(() => { });
 
           let stats = this.playerStats.get(player);

@@ -3,11 +3,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const helperConfig = {
-  token: process.env.DISCORD_TOKEN_HELPER || '',
-};
-
-const commands = [
+const helperCommands = [
   new SlashCommandBuilder()
     .setName('help')
     .setDescription('View all available commands and their descriptions'),
@@ -128,12 +124,18 @@ const commands = [
     ),
 ];
 
-async function deployCommands() {
-  if (!helperConfig.token) {
-    console.error('Error: DISCORD_TOKEN_HELPER environment variable is required');
-    process.exit(1);
-  }
+const setupCommand = new SlashCommandBuilder()
+  .setName('setup')
+  .setDescription('Configure the bot status channel')
+  .addChannelOption((option) =>
+    option.setName('channel')
+      .setDescription('Text channel for status updates')
+      .setRequired(true)
+  );
 
+const statusBotCommands = [setupCommand];
+
+async function deployCommands() {
   const clientId = process.env.DISCORD_CLIENT_ID;
   const guildId = process.env.DISCORD_GUILD_ID;
 
@@ -143,28 +145,58 @@ async function deployCommands() {
     process.exit(1);
   }
 
-  const rest = new REST({ version: '10' }).setToken(helperConfig.token);
+  const helperToken = process.env.DISCORD_TOKEN_HELPER;
+  const aeToken = process.env.DISCORD_TOKEN_AE;
+
+  if (!helperToken && !aeToken) {
+    console.error('Error: At least one DISCORD_TOKEN_* environment variable is required');
+    process.exit(1);
+  }
+
+  const restHelper = helperToken ? new REST({ version: '10' }).setToken(helperToken) : null;
+  const restAe = aeToken ? new REST({ version: '10' }).setToken(aeToken) : null;
 
   try {
-    console.log('🚀 Registering slash commands...');
-
-    if (guildId) {
-      console.log(`   Deploying to guild: ${guildId} (development mode)`);
-      await rest.put(
-        Routes.applicationGuildCommands(clientId, guildId),
-        { body: commands.map(cmd => cmd.toJSON()) }
-      );
-      console.log('✅ Commands registered to guild successfully!');
-    } else {
-      console.log('   Deploying globally (may take up to 1 hour to propagate)');
-      await rest.put(
-        Routes.applicationCommands(clientId),
-        { body: commands.map(cmd => cmd.toJSON()) }
-      );
-      console.log('✅ Commands registered globally successfully!');
+    if (restHelper) {
+      console.log('🚀 Registering Helper bot commands...');
+      const allCommands = [...helperCommands];
+      if (guildId) {
+        console.log(`   Deploying to guild: ${guildId} (development mode)`);
+        await restHelper.put(
+          Routes.applicationGuildCommands(clientId, guildId),
+          { body: allCommands.map(cmd => cmd.toJSON()) }
+        );
+        console.log('✅ Helper commands registered!');
+      } else {
+        await restHelper.put(
+          Routes.applicationCommands(clientId),
+          { body: allCommands.map(cmd => cmd.toJSON()) }
+        );
+        console.log('✅ Helper commands registered globally!');
+      }
+      console.log(`   Registered ${allCommands.length} commands`);
     }
 
-    console.log(`   Registered ${commands.length} commands`);
+    if (restAe) {
+      console.log('🚀 Registering Status bot commands (/setup)...');
+      const statusCommands = [setupCommand];
+      if (guildId) {
+        await restAe.put(
+          Routes.applicationGuildCommands(clientId, guildId),
+          { body: statusCommands.map(cmd => cmd.toJSON()) }
+        );
+        console.log('✅ Status bot commands registered to guild!');
+      } else {
+        await restAe.put(
+          Routes.applicationCommands(clientId),
+          { body: statusCommands.map(cmd => cmd.toJSON()) }
+        );
+        console.log('✅ Status bot commands registered globally!');
+      }
+      console.log(`   Registered ${statusCommands.length} commands`);
+    }
+
+    console.log('\n✅ All commands registered successfully!');
   } catch (error) {
     console.error('❌ Failed to register commands:', error);
     process.exit(1);

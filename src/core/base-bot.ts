@@ -78,7 +78,24 @@ export abstract class BaseBot {
    */
   private setupEventHandlers(): void {
     this.client.once(Events.ClientReady, () => this.onReady());
+    this.client.on(Events.InteractionCreate, (interaction) => this.handleInteraction(interaction));
     this.client.on(Events.Error, (error) => this.logger.error('Client error:', error));
+  }
+
+  /**
+   * Handle interactions - to be overridden by subclasses for custom commands
+   */
+  protected async handleInteraction(interaction: any): Promise<void> {
+    if (interaction.isChatInputCommand() && interaction.commandName === 'setup') {
+      await this.handleSetupCommand(interaction);
+    }
+  }
+
+  /**
+   * Handle /setup command - overridden by subclasses
+   */
+  protected async handleSetupCommand(interaction: any): Promise<void> {
+    await interaction.reply({ content: 'Setup command not available for this bot.', ephemeral: true });
   }
 
   /**
