@@ -11,7 +11,12 @@ interface RuntimeChannels {
 
 function loadRuntimeChannels(): RuntimeChannels {
   if (fs.existsSync(RUNTIME_CONFIG_FILE)) {
-    return JSON.parse(fs.readFileSync(RUNTIME_CONFIG_FILE, 'utf-8'));
+    try {
+      const parsed: unknown = JSON.parse(fs.readFileSync(RUNTIME_CONFIG_FILE, 'utf-8'));
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as RuntimeChannels;
+    } catch {
+      // Ignore malformed optional runtime configuration.
+    }
   }
   return {};
 }

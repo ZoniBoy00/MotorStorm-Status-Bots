@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 yarn.lock
 
 # Build output
@@ -45,3 +44,6 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+
+# Keep Node test files
+!tests/**/*.js

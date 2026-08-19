@@ -61,11 +61,11 @@ NOTIFICATION_ROLE_AE=role_id
 NOTIFICATION_PINGS_AE=false
 
 # Database (Required for analytics)
-MYSQL_HOST=localhost
+MYSQL_HOST=your_mysql_host
 MYSQL_PORT=3306
-MYSQL_USER=root
+MYSQL_USER=your_mysql_user
 MYSQL_PASSWORD=your_password
-MYSQL_DATABASE=motorstorm_stats
+MYSQL_DATABASE=your_database_name
 ```
 
 ### Run All Bots

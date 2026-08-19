@@ -76,15 +76,15 @@ This guide explains how to deploy the MotorStorm Status Bots on a Pterodactyl Pa
 | `NOTIFICATION_PINGS_AE` | Enable @mentions | true |
 | *(same for APOC, PR, MV)* | | |
 
-### Database (Optional - for analytics)
+### Database (Required - the launcher validates these settings)
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MYSQL_HOST` | Database host | localhost |
+| `MYSQL_HOST` | Database host | - |
 | `MYSQL_PORT` | Database port | 3306 |
-| `MYSQL_USER` | Database user | root |
+| `MYSQL_USER` | Database user | - |
 | `MYSQL_PASSWORD` | Database password | - |
-| `MYSQL_DATABASE` | Database name | motorstorm_stats |
+| `MYSQL_DATABASE` | Database name | - |
 
 ### Deployment Settings (Optional)
 

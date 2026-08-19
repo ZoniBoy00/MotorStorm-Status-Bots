@@ -74,9 +74,16 @@ export class NotificationManager {
       )
 
       for (const row of results) {
+        let players: string[] = [];
+        try {
+          const parsed = typeof row.players === 'string' ? JSON.parse(row.players || '[]') : row.players;
+          if (Array.isArray(parsed)) players = parsed.filter((value): value is string => typeof value === 'string');
+        } catch {
+          this.logger.warning(`Ignoring malformed lobby history for ${this.botName}`);
+        }
         this.previousLobbies.set(row.lobby_name, {
           name: row.lobby_name,
-          players: JSON.parse(row.players || '[]'),
+          players,
           timestamp: Number(row.timestamp)
         })
       }

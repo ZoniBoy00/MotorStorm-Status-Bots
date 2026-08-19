@@ -1,10 +1,12 @@
 {
   "name": "motorstorm-status-bots",
-  "version": "2.2.0",
-  "description": "TypeScript Discord bots for monitoring MotorStorm server status with lobby notifications",
+  "version": "2.2.1",
+  "description": "Production-ready TypeScript Discord bots for MotorStorm server monitoring, lobby notifications, and analytics",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test",
     "start": "npm run build && node dist/index.js",
     "start:dev": "ts-node src/index.ts",
     "start:ae": "ts-node src/bots/motorstorm-ae/index.ts",
@@ -28,10 +30,10 @@
   "author": "ZoniBoy00",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.15.0",
-    "discord.js": "^14.26.2",
+    "axios": "^1.19.0",
+    "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
-    "mysql2": "^3.22.0",
+    "mysql2": "^3.23.3",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {

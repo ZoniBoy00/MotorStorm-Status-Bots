@@ -33,7 +33,11 @@ export class MessageManager {
       if (fs.existsSync(this.filePath)) {
         const data = fs.readFileSync(this.filePath, 'utf-8');
         if (data.trim()) {
-          this.messageIds = JSON.parse(data);
+          const parsed: unknown = JSON.parse(data);
+          if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            throw new Error('Message ID store must contain an object');
+          }
+          this.messageIds = parsed as MessageIdStore;
           this.logger.info(`Loaded ${Object.keys(this.messageIds).length} message IDs from JSON for ${this.botName}`);
         }
       } else {

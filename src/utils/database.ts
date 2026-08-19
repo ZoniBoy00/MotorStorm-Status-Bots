@@ -5,34 +5,56 @@ import { Logger } from './logger';
 dotenv.config();
 
 export class Database {
-    private static pool: mysql.Pool;
+    private static pool: mysql.Pool | undefined;
     private static logger = new Logger('Database');
 
-    public static async init() {
-        if (!this.pool) {
+    private static getConfig() {
+        const required = ['MYSQL_HOST', 'MYSQL_PORT', 'MYSQL_USER', 'MYSQL_PASSWORD', 'MYSQL_DATABASE'] as const;
+        const missing = required.filter((key) => !process.env[key]?.trim());
+        if (missing.length > 0) {
+            throw new Error(`Missing required database environment variables: ${missing.join(', ')}`);
+        }
+
+        const port = Number(process.env.MYSQL_PORT);
+        if (!Number.isInteger(port) || port < 1 || port > 65535) {
+            throw new Error('MYSQL_PORT must be a valid TCP port');
+        }
+
+        return {
+            host: process.env.MYSQL_HOST!,
+            port,
+            user: process.env.MYSQL_USER!,
+            password: process.env.MYSQL_PASSWORD!,
+            database: process.env.MYSQL_DATABASE!,
+            waitForConnections: true,
+            connectionLimit: 10,
+            queueLimit: 0,
+            connectTimeout: 10_000,
+            enableKeepAlive: true,
+            keepAliveInitialDelay: 0,
+        };
+    }
+
+    public static async init(): Promise<void> {
+        if (this.pool) return;
+
+        try {
+            this.pool = mysql.createPool(this.getConfig());
+            const connection = await this.pool.getConnection();
             try {
-                this.pool = mysql.createPool({
-                    host: process.env.MYSQL_HOST || 'localhost',
-                    port: parseInt(process.env.MYSQL_PORT || '3306'),
-                    user: process.env.MYSQL_USER || 'root',
-                    password: process.env.MYSQL_PASSWORD || '',
-                    database: process.env.MYSQL_DATABASE || 'motorstorm_stats',
-                    waitForConnections: true,
-                    connectionLimit: 10,
-                    queueLimit: 0,
-                });
-
-                // Test connection
-                const connection = await this.pool.getConnection();
-                this.logger.success('MySQL connection established');
-
                 await this.createTables(connection);
-
+            } finally {
                 connection.release();
-            } catch (error) {
-                this.logger.error('Failed to connect to MySQL:', error instanceof Error ? error : new Error(String(error)));
-                throw error;
             }
+            this.logger.success('MySQL connection established and tables verified');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            this.logger.error(`Failed to initialize MySQL: ${message}`);
+            if (this.pool) {
+                await this.pool.end().catch(() => undefined);
+                this.pool = undefined;
+            }
+            throw error;
         }
     }
 
@@ -168,12 +190,15 @@ export class Database {
 
     public static async query<T = any>(sql: string, params?: any[]): Promise<T> {
         if (!this.pool) await this.init();
-        const [results] = await this.pool.execute(sql, params);
+        const pool = this.pool;
+        if (!pool) throw new Error('MySQL pool is not initialized');
+        const [results] = await pool.execute(sql, params);
         return results as T;
     }
 
-    public static async getPool() {
+    public static async getPool(): Promise<mysql.Pool> {
         if (!this.pool) await this.init();
+        if (!this.pool) throw new Error('MySQL pool is not initialized');
         return this.pool;
     }
 }

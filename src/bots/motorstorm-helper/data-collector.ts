@@ -13,6 +13,8 @@ import {
 import { Logger } from '../../utils';
 import { Database } from '../../utils/database';
 
+type JsonRecord = Record<string, number>;
+
 export class DataCollector {
   private logger: Logger;
   private playerStats: Map<string, PlayerStatistics> = new Map();
@@ -36,6 +38,17 @@ export class DataCollector {
     this.logger = new Logger('DataCollector');
   }
 
+  private parseJson<T>(value: unknown, fallback: T, field: string): T {
+    if (value === null || value === undefined || value === '') return fallback;
+    if (typeof value === 'object') return value as T;
+    try {
+      return JSON.parse(String(value)) as T;
+    } catch {
+      this.logger.warning(`Ignoring malformed JSON in database field: ${field}`);
+      return fallback;
+    }
+  }
+
   public async init(): Promise<void> {
     try {
       await Database.init();
@@ -43,6 +56,7 @@ export class DataCollector {
       this.logger.success('DataCollector initialized with MySQL');
     } catch (error) {
       this.logger.error('Failed to initialize DataCollector:', error instanceof Error ? error : new Error(String(error)));
+      throw error;
     }
   }
 
@@ -55,10 +69,10 @@ export class DataCollector {
       );
       this.snapshots = snapshots.map(s => ({
         timestamp: Number(s.timestamp),
-        ae: { players: JSON.parse(s.ae_players || '[]'), lobbies: s.ae_lobbies },
-        apoc: { players: JSON.parse(s.apoc_players || '[]'), lobbies: s.apoc_lobbies },
-        pr: { players: JSON.parse(s.pr_players || '[]'), lobbies: s.pr_lobbies },
-        mv: { players: JSON.parse(s.mv_players || '[]'), lobbies: s.mv_lobbies },
+        ae: { players: this.parseJson(s.ae_players, [], 'snapshots.ae_players'), lobbies: s.ae_lobbies },
+        apoc: { players: this.parseJson(s.apoc_players, [], 'snapshots.apoc_players'), lobbies: s.apoc_lobbies },
+        pr: { players: this.parseJson(s.pr_players, [], 'snapshots.pr_players'), lobbies: s.pr_lobbies },
+        mv: { players: this.parseJson(s.mv_players, [], 'snapshots.mv_players'), lobbies: s.mv_lobbies },
         totalPlayers: s.total_players
       })).reverse();
 
@@ -71,8 +85,8 @@ export class DataCollector {
           lastSeen: Number(s.last_seen),
           firstSeen: Number(s.first_seen),
           games: { ae: s.ae_sessions, apoc: s.apoc_sessions, pr: s.pr_sessions, mv: s.mv_sessions },
-          peakHours: JSON.parse(s.peak_hours || '{}'),
-          peakDays: JSON.parse(s.peak_days || '{}'),
+          peakHours: this.parseJson(s.peak_hours, {}, 'player_stats.peak_hours'),
+          peakDays: this.parseJson(s.peak_days, {}, 'player_stats.peak_days'),
           lobbiesJoined: [],
           playtimeByGame: { ae: s.playtime_ae, apoc: s.playtime_apoc, pr: s.playtime_pr, mv: s.playtime_mv },
           averageSessionLength: s.average_session_length,
@@ -81,7 +95,7 @@ export class DataCollector {
       }
 
       // Load Sessions
-      const sessions: any[] = await Database.query('SELECT * FROM sessions ORDER BY session_start DESC LIMIT 10000');
+      const sessions: any[] = await Database.query('SELECT * FROM sessions ORDER BY session_start DESC LIMIT ?', [DataCollector.MAX_IN_MEMORY_SESSIONS]);
       this.sessionRecords = sessions.map(s => ({
         playerName: s.player_name,
         game: s.game as any,
@@ -121,7 +135,7 @@ export class DataCollector {
         this.gameModeStats.set(m.mode, {
           mode: m.mode,
           count: m.count,
-          popularTracks: new Map(Object.entries(JSON.parse(m.popular_tracks || '{}'))),
+          popularTracks: new Map(Object.entries(this.parseJson<JsonRecord>(m.popular_tracks, {}, 'game_modes.popular_tracks'))),
           averageLaps: m.average_laps,
           direction: { forward: m.direction_forward, reverse: m.direction_reverse }
         });
@@ -130,6 +144,7 @@ export class DataCollector {
       this.logger.info(`Loaded historical data from MySQL: ${this.snapshots.length} snapshots, ${this.playerStats.size} players, ${this.sessionRecords.length} sessions`);
     } catch (error) {
       this.logger.error('Failed to load data from MySQL:', error instanceof Error ? error : new Error(String(error)));
+      throw error;
     }
   }
 

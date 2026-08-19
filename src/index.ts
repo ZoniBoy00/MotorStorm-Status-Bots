@@ -36,8 +36,9 @@ async function main() {
     await Database.init();
     console.log(`${colors.green}Database connected successfully${colors.reset}`);
   } catch (error) {
-    console.error(`${colors.red}Failed to initialize database: ${(error as Error).message}${colors.reset}`);
-    console.error(`${colors.dim}Note: Some features may not work without database${colors.reset}`);
+    console.error(`${colors.red}Failed to initialize database. Startup aborted: ${(error as Error).message}${colors.reset}`);
+    process.exitCode = 1;
+    return;
   }
   console.log('');
 
