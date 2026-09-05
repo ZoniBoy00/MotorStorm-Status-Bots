@@ -64,7 +64,8 @@ export class MessageManager {
   async getOrCreateMessage(
     channel: TextChannel,
     data: ServerData,
-    formatEmbed: (data: ServerData) => EmbedBuilder
+    formatEmbed: (data: ServerData) => EmbedBuilder,
+    initialEmbed?: EmbedBuilder
   ): Promise<any | null> {
     // Try to fetch existing message for this channel
     if (this.messageIds[channel.id]) {
@@ -87,7 +88,7 @@ export class MessageManager {
 
     // Create a new message if no valid message ID exists
     try {
-      const embed = formatEmbed(data);
+      const embed = initialEmbed ?? formatEmbed(data);
       const message = await channel.send({ embeds: [embed] });
 
       // Store the new message ID in memory and JSON

@@ -62,7 +62,7 @@ export function getAEConfig(): BotConfig {
   return {
     token,
     channelIds,
-    statusCheckInterval: 10000, // 10 seconds
+    statusCheckInterval: 20000, // 20 seconds
     activityRotationInterval: 30000, // 30 seconds
     debug: process.env.DEBUG === 'true',
     gameName: 'MotorStorm Arctic Edge',

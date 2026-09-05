@@ -62,7 +62,7 @@ export function getApocConfig(): BotConfig {
   return {
     token,
     channelIds,
-    statusCheckInterval: 10000,
+    statusCheckInterval: 20000, // 20 seconds
     activityRotationInterval: 30000,
     debug: process.env.DEBUG === 'true',
     gameName: 'MotorStorm Apocalypse',

@@ -16,6 +16,11 @@ export abstract class BaseBot {
   protected totalPlayers: number = 0;
   private statusCheckTimer?: NodeJS.Timeout;
   private activityRotationTimer?: NodeJS.Timeout;
+  private statusCheckInFlight = false;
+  private lastDataSignature?: string;
+  private lastGoodData?: ServerData;
+  private isOffline = false;
+  private consecutiveFailures = 0;
   private readyPromise: Promise<void>;
   private readyResolve?: () => void;
 
@@ -135,8 +140,9 @@ export abstract class BaseBot {
    * Start status check interval
    */
   private startStatusChecks(): void {
+    void this.checkServerStatus();
     this.statusCheckTimer = setInterval(
-      () => this.checkServerStatus(),
+      () => void this.checkServerStatus(),
       this.config.statusCheckInterval
     );
   }
@@ -181,27 +187,61 @@ export abstract class BaseBot {
   /**
    * Check server status and update all channels
    */
+  private buildOfflineEmbed(): EmbedBuilder {
+    return new EmbedBuilder()
+      .setTitle(`${this.config.gameName} — offline`)
+      .setDescription('Server status is temporarily unavailable. Retrying automatically.')
+      .setColor(0xED4245)
+      .setTimestamp();
+  }
+
+  /**
+   * Check server status and update all channels only when state changes.
+   */
   private async checkServerStatus(): Promise<void> {
+    if (this.statusCheckInFlight) {
+      this.logger.warning('Skipping overlapping status check');
+      return;
+    }
+
+    this.statusCheckInFlight = true;
     try {
       this.logger.info('Fetching server status...');
 
       const data = await this.fetchServerData();
       if (!data) {
-        this.logger.error('Failed to fetch server data from API');
+        this.consecutiveFailures += 1;
+        this.logger.error(`Failed to fetch server data from API (failure ${this.consecutiveFailures})`);
+
+        if (!this.isOffline) {
+          this.isOffline = true;
+          const offlineEmbed = this.buildOfflineEmbed();
+          await Promise.allSettled(
+            this.config.channelIds.map((channelId) => this.updateChannel(
+              channelId,
+              this.lastGoodData ?? {},
+              offlineEmbed
+            ))
+          );
+        }
         return;
       }
 
-      this.logger.success('Data fetched successfully');
-      const embed = this.formatEmbed(data);
+      const recovered = this.isOffline;
+      this.isOffline = false;
+      this.consecutiveFailures = 0;
+      this.lastGoodData = data;
+      this.logger.success(recovered ? 'Server status recovered' : 'Data fetched successfully');
 
-      if (this.config.debug) {
-        this.logger.info('Embed formatted successfully');
+      const signature = JSON.stringify(data);
+      if (!recovered && signature === this.lastDataSignature) {
+        this.logger.info('Server state unchanged; skipped Discord edits');
+        return;
       }
+      this.lastDataSignature = signature;
 
-      // Update total players count
+      const embed = this.formatEmbed(data);
       this.totalPlayers = this.getTotalPlayers(data);
-
-      // Check for new lobbies and send notifications
       const lobbies = this.getLobbies(data);
 
       if (this.config.notificationChannelId) {
@@ -216,7 +256,6 @@ export abstract class BaseBot {
         }
       }
 
-      // Process all channels in parallel for better performance
       await Promise.allSettled(
         this.config.channelIds.map((channelId) => this.updateChannel(channelId, data, embed))
       );
@@ -226,6 +265,8 @@ export abstract class BaseBot {
       if (this.config.debug && error instanceof Error) {
         console.error(error);
       }
+    } finally {
+      this.statusCheckInFlight = false;
     }
   }
 
@@ -258,7 +299,8 @@ export abstract class BaseBot {
       const message = await this.messageManager.getOrCreateMessage(
         textChannel,
         data,
-        (d) => this.formatEmbed(d)
+        (d) => this.formatEmbed(d),
+        embed
       );
 
       if (!message) {

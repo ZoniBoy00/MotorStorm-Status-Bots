@@ -27,6 +27,10 @@ Professional TypeScript Discord bots for monitoring MotorStorm server status wit
 - **Input sanitization** for security
 - **Command cooldowns** to prevent spam
 - **Database support** for historical analytics
+- **20-second status polling** for the game server bots
+- **State-aware Discord updates** that skip unchanged embeds
+- **Bounded API retries with exponential backoff** for transient failures
+- **Explicit offline status** when the status API is unavailable
 
 ## Quick Start
 
@@ -134,6 +138,15 @@ NOTIFICATION_ROLE_AE=9876543210987654321
 
 Simply omit the `NOTIFICATION_CHANNEL_*` and `NOTIFICATION_ROLE_*` variables.
 
+## Runtime Behavior
+
+- Game server status is polled every 20 seconds.
+- Discord embeds are edited only when the observed server state changes.
+- Overlapping status requests are prevented while a previous request is still running.
+- Transient API failures use bounded exponential backoff instead of retrying indefinitely.
+- Repeated API failures produce an explicit offline status rather than leaving stale data displayed.
+- Console output remains colorized and human-readable for Pterodactyl logs.
+
 ## Pterodactyl Panel Deployment
 
 ### Quick Setup
@@ -212,9 +225,9 @@ MsStatusBots/
 
 ## Performance Metrics
 
-- **Memory Usage:** ~140MB total for all bots
+- **Memory Usage:** ~160MB total for all bots
 - **CPU Usage:** <3% average
-- **Network:** Minimal (API calls every 10 seconds)
+- **Network:** Minimal (API calls every 20 seconds)
 - **Startup Time:** 3-5 seconds for all bots
 - **Channel Updates:** <1 second (parallel processing)
 
