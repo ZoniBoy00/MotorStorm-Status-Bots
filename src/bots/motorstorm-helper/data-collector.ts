@@ -17,6 +17,8 @@ type JsonRecord = Record<string, number>;
 
 export class DataCollector {
   private logger: Logger;
+  private dbWriteFailures = 0;
+  private lastDbErrorLog = 0;
   private playerStats: Map<string, PlayerStatistics> = new Map();
   private snapshots: ActivitySnapshot[] = [];
   private maxSnapshots = 10000;
@@ -47,6 +49,20 @@ export class DataCollector {
       this.logger.warning(`Ignoring malformed JSON in database field: ${field}`);
       return fallback;
     }
+  }
+
+  /**
+   * Log failed background writes, throttled so a database outage does not flood the console.
+   */
+  private reportDbError(error: unknown): void {
+    this.dbWriteFailures++;
+    const now = Date.now();
+    if (now - this.lastDbErrorLog < 60_000) return;
+
+    const message = error instanceof Error ? error.message : String(error);
+    this.logger.warning(`Database write failed (${this.dbWriteFailures} failure(s) in the last minute): ${message}`);
+    this.lastDbErrorLog = now;
+    this.dbWriteFailures = 0;
   }
 
   public async init(): Promise<void> {
@@ -204,7 +220,7 @@ export class DataCollector {
       Database.query(
         'INSERT INTO player_registry (player_name, first_seen, last_seen, games_played) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE last_seen = ?, games_played = ?',
         [player, timestamp, timestamp, JSON.stringify(games), timestamp, JSON.stringify(games)]
-      ).catch(() => { });
+      ).catch((error) => this.reportDbError(error));
     }
 
     await this.trackPlayerSessions(snapshot);
@@ -305,7 +321,7 @@ export class DataCollector {
           modeStats.count++;
           if (track) {
             modeStats.popularTracks.set(track, (modeStats.popularTracks.get(track) || 0) + 1);
-            Database.query('INSERT INTO track_popularity (track_name, count, game) VALUES (?, 1, ?) ON DUPLICATE KEY UPDATE count = count + 1', [track, game]).catch(() => { });
+            Database.query('INSERT INTO track_popularity (track_name, count, game) VALUES (?, 1, ?) ON DUPLICATE KEY UPDATE count = count + 1', [track, game]).catch((error) => this.reportDbError(error));
           }
           if (direction) {
             if (direction.toLowerCase().includes('reverse')) modeStats.direction.reverse++;
@@ -315,7 +331,7 @@ export class DataCollector {
           Database.query(
             'INSERT INTO game_modes (mode, count, popular_tracks, average_laps, direction_forward, direction_reverse) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE count = ?, popular_tracks = ?, average_laps = ?, direction_forward = ?, direction_reverse = ?',
             [gameMode, modeStats.count, JSON.stringify(Object.fromEntries(modeStats.popularTracks)), 0, modeStats.direction.forward, modeStats.direction.reverse, modeStats.count, JSON.stringify(Object.fromEntries(modeStats.popularTracks)), 0, modeStats.direction.forward, modeStats.direction.reverse]
-          ).catch(() => { });
+          ).catch((error) => this.reportDbError(error));
         }
       }
     }
@@ -356,7 +372,7 @@ export class DataCollector {
           if (this.sessionRecords.length > DataCollector.MAX_IN_MEMORY_SESSIONS) {
             this.sessionRecords.splice(0, this.sessionRecords.length - DataCollector.MAX_IN_MEMORY_SESSIONS);
           }
-          Database.query('INSERT INTO sessions (player_name, game, session_start, session_end, duration) VALUES (?, ?, ?, ?, ?)', [sessionRecord.playerName, sessionRecord.game, sessionRecord.sessionStart, sessionRecord.sessionEnd, sessionRecord.duration]).catch(() => { });
+          Database.query('INSERT INTO sessions (player_name, game, session_start, session_end, duration) VALUES (?, ?, ?, ?, ?)', [sessionRecord.playerName, sessionRecord.game, sessionRecord.sessionStart, sessionRecord.sessionEnd, sessionRecord.duration]).catch((error) => this.reportDbError(error));
 
           let stats = this.playerStats.get(player);
           if (!stats) { stats = this.createEmptyStats(now); this.playerStats.set(player, stats); }
@@ -378,7 +394,7 @@ export class DataCollector {
     await Database.query(
       'INSERT INTO player_stats (player_name, total_sessions, total_minutes, last_seen, first_seen, ae_sessions, apoc_sessions, pr_sessions, mv_sessions, peak_hours, peak_days, playtime_ae, playtime_apoc, playtime_pr, playtime_mv, average_session_length, longest_session) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE total_sessions = ?, total_minutes = ?, last_seen = ?, ae_sessions = ?, apoc_sessions = ?, pr_sessions = ?, mv_sessions = ?, peak_hours = ?, peak_days = ?, playtime_ae = ?, playtime_apoc = ?, playtime_pr = ?, playtime_mv = ?, average_session_length = ?, longest_session = ?',
       [name, s.totalSessions, s.totalMinutes, s.lastSeen, s.firstSeen, s.games.ae, s.games.apoc, s.games.pr, s.games.mv, JSON.stringify(s.peakHours), JSON.stringify(s.peakDays), s.playtimeByGame.ae, s.playtimeByGame.apoc, s.playtimeByGame.pr, s.playtimeByGame.mv, s.averageSessionLength, s.longestSession, s.totalSessions, s.totalMinutes, s.lastSeen, s.games.ae, s.games.apoc, s.games.pr, s.games.mv, JSON.stringify(s.peakHours), JSON.stringify(s.peakDays), s.playtimeByGame.ae, s.playtimeByGame.apoc, s.playtimeByGame.pr, s.playtimeByGame.mv, s.averageSessionLength, s.longestSession]
-    ).catch(() => { });
+    ).catch((error) => this.reportDbError(error));
   }
 
   private async trackSocialConnections(snapshot: ActivitySnapshot): Promise<void> {
@@ -394,7 +410,7 @@ export class DataCollector {
             const coPlayer = players[j];
             const newCount = (social.coPlayers.get(coPlayer) || 0) + 1;
             social.coPlayers.set(coPlayer, newCount);
-            Database.query('INSERT INTO social_connections (player_name, co_player_name, count) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE count = count + 1', [player, coPlayer]).catch(() => { });
+            Database.query('INSERT INTO social_connections (player_name, co_player_name, count) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE count = count + 1', [player, coPlayer]).catch((error) => this.reportDbError(error));
           }
         }
       }

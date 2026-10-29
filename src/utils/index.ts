@@ -4,3 +4,5 @@ export * from './message-manager';
 export * from './notification-manager';
 export * from './database';
 export * from './migration';
+export * from './runtime-channels';
+export * from './bot-config';

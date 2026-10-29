@@ -36,6 +36,8 @@ Professional TypeScript Discord bots for monitoring MotorStorm server status wit
 
 ### Installation
 
+Requires Node.js 22 or newer.
+
 ```bash
 npm install
 npm run build
@@ -83,12 +85,22 @@ This starts all bots that have valid tokens configured. Bots without tokens are 
 ### Deploy Slash Commands
 
 ```bash
-# Global commands (takes up to 1 hour to propagate)
+# Global commands (can take a few minutes to propagate)
 npm run deploy
 
 # Or for faster development testing (guild-specific)
 DISCORD_GUILD_ID=your_guild_id npm run deploy
 ```
+
+Commands are registered for every bot that has a token configured: the analytics commands for the
+Helper bot and `/setup` for each status bot. The application ID is looked up from each token, so no
+client ID needs to be configured.
+
+### Adding Status Channels with `/setup`
+
+Each status bot has a `/setup channel:#channel` command that adds another status channel without
+editing `.env`. Only members with the **Manage Server** permission can use it. Added channels are
+stored in `data/runtime-channels.json` and merged with `CHANNEL_IDS_*` on startup.
 
 ## Helper Bot Commands
 
@@ -104,8 +116,14 @@ The Helper bot provides comprehensive analytics via Discord slash commands:
 | `/gamedist` | Game popularity distribution |
 | `/playerstats <name>` | Detailed player statistics |
 | `/topplayers [limit]` | Most active players |
-| `/leaderboard <type>` | Specialized leaderboards |
+| `/leaderboard <type>` | Leaderboards: most active, longest streak, most diverse, most social |
+| `/lobbies` | Lobby statistics and popular hosts |
+| `/sessions` | Session duration and player behavior |
+| `/retention` | Player retention and return rates |
+| `/growth [days]` | Player growth trends |
+| `/predict` | Predicted peak times for upcoming days |
 | `/current` | Currently online players |
+| `/averages` | Average statistics across players and games |
 | `/random [game]` | Random track picker |
 
 ## Lobby Notifications
@@ -196,7 +214,6 @@ The Docker image includes:
 | `NOTIFICATION_ROLE_*` | Role to mention in notifications | Optional |
 | `NOTIFICATION_PINGS_*` | Enable @mentions (true/false) | Optional |
 | `MYSQL_*` | Database configuration | Required for analytics |
-| `DISCORD_CLIENT_ID` | For command deployment | Optional |
 | `DISCORD_GUILD_ID` | For development commands | Optional |
 | `DEBUG` | Enable detailed logging | No (default: false) |
 
@@ -239,6 +256,7 @@ MsStatusBots/
 npm run build          # Compile TypeScript
 npm start              # Build and run all bots
 npm run start:dev      # Run with ts-node (dev mode)
+npm test               # Build and run tests
 npm run deploy        # Register slash commands
 npm run migrate       # Migrate JSON data to MySQL
 npm run clean         # Remove dist folder

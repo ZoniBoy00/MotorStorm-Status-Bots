@@ -4,6 +4,8 @@ import { ActivityType } from 'discord.js';
 export interface BotConfig {
   token: string;
   channelIds: string[];
+  /** Key used to persist channels added via /setup */
+  runtimeKey?: string;
   statusCheckInterval: number;
   activityRotationInterval: number;
   debug: boolean;

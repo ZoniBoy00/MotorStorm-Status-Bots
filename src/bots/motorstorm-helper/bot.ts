@@ -1,9 +1,10 @@
 import {
   Client,
   GatewayIntentBits,
-  ChatInputCommandInteraction,
   Events,
   ActivityType,
+  Interaction,
+  MessageFlags,
 } from 'discord.js';
 import { helperConfig } from './config';
 import { DataCollector } from './data-collector';
@@ -72,7 +73,7 @@ export class HelperBot {
 
   private setupEventHandlers(): void {
     this.client.once(Events.ClientReady, () => this.onReady());
-    this.client.on('interactionCreate', (interaction) => this.handleInteraction(interaction));
+    this.client.on(Events.InteractionCreate, (interaction) => this.handleInteraction(interaction));
   }
 
   private async onReady(): Promise<void> {
@@ -147,29 +148,28 @@ export class HelperBot {
     }
   }
 
-  private async handleInteraction(interaction: any): Promise<void> {
-    if (!interaction.isCommand()) return;
+  private async handleInteraction(interaction: Interaction): Promise<void> {
+    if (!interaction.isChatInputCommand()) return;
 
-    const command = interaction as ChatInputCommandInteraction;
+    const command = interaction;
     const userId = interaction.user.id;
     const now = Date.now();
 
     const lastCommand = this.commandCooldowns.get(userId);
     if (lastCommand && now - lastCommand < this.COMMAND_COOLDOWN_MS) {
-      await command.reply({ content: '⏳ Please wait a moment before using another command.', ephemeral: true });
+      await command.reply({ content: '⏳ Please wait a moment before using another command.', flags: MessageFlags.Ephemeral });
       return;
     }
 
     this.commandCooldowns.set(userId, now);
+    this.pruneCooldowns(now);
 
+    let commandTimeout: NodeJS.Timeout | undefined;
     try {
       await command.deferReply();
 
-      const commandTimeout = setTimeout(async () => {
-        try {
-          await command.editReply('⏱️ Command is taking longer than expected... Still processing...');
-        } catch (err) {
-        }
+      commandTimeout = setTimeout(() => {
+        command.editReply('⏱️ Command is taking longer than expected... Still processing...').catch(() => undefined);
       }, 10000);
 
       switch (command.commandName) {
@@ -191,8 +191,6 @@ export class HelperBot {
         case 'averages': await this.commandHandlers.handleAveragesCommand(command); break;
         case 'random': await this.commandHandlers.handleRandomMapCommand(command); break;
       }
-
-      clearTimeout(commandTimeout);
     } catch (error) {
       this.logger.error('Command error:', error instanceof Error ? error : new Error(String(error)));
       try {
@@ -200,6 +198,18 @@ export class HelperBot {
       } catch (editError) {
         this.logger.error('Failed to edit reply:', editError instanceof Error ? editError : new Error(String(editError)));
       }
+    } finally {
+      clearTimeout(commandTimeout);
+    }
+  }
+
+  /**
+   * Drop expired cooldown entries so the map cannot grow without limit.
+   */
+  private pruneCooldowns(now: number): void {
+    if (this.commandCooldowns.size < 1000) return;
+    for (const [userId, timestamp] of this.commandCooldowns) {
+      if (now - timestamp >= this.COMMAND_COOLDOWN_MS) this.commandCooldowns.delete(userId);
     }
   }
 

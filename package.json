@@ -13,9 +13,10 @@
     "start:apoc": "ts-node src/bots/motorstorm-apoc/index.ts",
     "start:pr": "ts-node src/bots/motorstorm-pr/index.ts",
     "start:mv": "ts-node src/bots/motorstorm-mv/index.ts",
+    "start:helper": "ts-node src/bots/motorstorm-helper/index.ts",
     "migrate": "ts-node src/scripts/migrate-to-mysql.ts",
     "deploy": "ts-node src/scripts/deploy-commands.ts",
-    "clean": "rm -rf dist",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
     "watch": "tsc --watch"
   },
   "keywords": [
@@ -43,7 +44,7 @@
     "typescript": "^6.0.2"
   },
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=22.0.0",
     "npm": ">=9.0.0"
   }
 }

@@ -1,6 +1,17 @@
-import { Client, GatewayIntentBits, EmbedBuilder, TextChannel, ChannelType, Events } from 'discord.js';
-import { BotConfig, ActivityConfig, ServerData } from '../types';
-import { Logger, MessageManager, NotificationManager } from '../utils';
+import {
+  Client,
+  GatewayIntentBits,
+  EmbedBuilder,
+  TextChannel,
+  ChannelType,
+  Events,
+  Interaction,
+  ChatInputCommandInteraction,
+  MessageFlags,
+  PermissionFlagsBits,
+} from 'discord.js';
+import { BotConfig, ActivityConfig, ServerData, Lobby } from '../types';
+import { Logger, MessageManager, NotificationManager, saveRuntimeChannel } from '../utils';
 
 /**
  * Abstract base class for all MotorStorm bots with multi-channel support
@@ -76,7 +87,7 @@ export abstract class BaseBot {
   /**
    * Get lobbies from server data - to be implemented by each bot
    */
-  protected abstract getLobbies(data: ServerData): any[];
+  protected abstract getLobbies(data: ServerData): Lobby[];
 
   /**
    * Setup event handlers
@@ -88,19 +99,54 @@ export abstract class BaseBot {
   }
 
   /**
-   * Handle interactions - to be overridden by subclasses for custom commands
+   * Handle interactions - can be extended by subclasses for custom commands
    */
-  protected async handleInteraction(interaction: any): Promise<void> {
+  protected async handleInteraction(interaction: Interaction): Promise<void> {
     if (interaction.isChatInputCommand() && interaction.commandName === 'setup') {
-      await this.handleSetupCommand(interaction);
+      try {
+        await this.handleSetupCommand(interaction);
+      } catch (error) {
+        this.logger.error('Setup command failed:', error as Error);
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction
+            .reply({ content: '❌ Failed to save the status channel.', flags: MessageFlags.Ephemeral })
+            .catch(() => undefined);
+        }
+      }
     }
   }
 
   /**
-   * Handle /setup command - overridden by subclasses
+   * Handle /setup: register an additional status channel. Requires Manage Server.
    */
-  protected async handleSetupCommand(interaction: any): Promise<void> {
-    await interaction.reply({ content: 'Setup command not available for this bot.', ephemeral: true });
+  protected async handleSetupCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (!this.config.runtimeKey) {
+      await interaction.reply({ content: 'Setup command not available for this bot.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    // Commands are registered with Manage Server as default permission, but server admins
+    // can override that in integration settings, so verify here as well.
+    if (!interaction.inGuild() || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+      await interaction.reply({
+        content: '❌ You need the **Manage Server** permission to use this command.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const channel = interaction.options.getChannel('channel', true, [ChannelType.GuildText]);
+
+    saveRuntimeChannel(this.config.runtimeKey, channel.id);
+    this.config.channelIds = [...new Set([...this.config.channelIds, channel.id])];
+    // Force the next status check to post even if the server state is unchanged
+    this.lastDataSignature = undefined;
+    this.logger.info(`Status channel ${channel.id} added by ${interaction.user.tag}`);
+
+    await interaction.reply({
+      content: `✅ Status channel set to ${channel.toString()}. The bot will now post server status here.`,
+      flags: MessageFlags.Ephemeral,
+    });
   }
 
   /**

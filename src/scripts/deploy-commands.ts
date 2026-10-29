@@ -1,4 +1,11 @@
-import { REST, Routes, SlashCommandBuilder } from 'discord.js';
+import {
+  REST,
+  Routes,
+  SlashCommandBuilder,
+  ChannelType,
+  InteractionContextType,
+  PermissionFlagsBits,
+} from 'discord.js';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -127,73 +134,55 @@ const helperCommands = [
 const setupCommand = new SlashCommandBuilder()
   .setName('setup')
   .setDescription('Configure the bot status channel')
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+  .setContexts(InteractionContextType.Guild)
   .addChannelOption((option) =>
     option.setName('channel')
       .setDescription('Text channel for status updates')
+      .addChannelTypes(ChannelType.GuildText)
       .setRequired(true)
   );
 
-const statusBotCommands = [setupCommand];
+const statusBots = [
+  { name: 'Arctic Edge', tokenEnv: 'DISCORD_TOKEN_AE' },
+  { name: 'Apocalypse', tokenEnv: 'DISCORD_TOKEN_APOC' },
+  { name: 'Pacific Rift', tokenEnv: 'DISCORD_TOKEN_PR' },
+  { name: 'Monument Valley', tokenEnv: 'DISCORD_TOKEN_MV' },
+];
+
+/**
+ * Register commands for the application that owns the given token.
+ * Each bot is its own Discord application, so the application ID is looked up from the token.
+ */
+async function registerCommands(label: string, token: string, commands: Array<{ toJSON(): unknown }>, guildId?: string) {
+  const rest = new REST({ version: '10' }).setToken(token);
+  const application = (await rest.get(Routes.currentApplication())) as { id: string };
+  const route = guildId
+    ? Routes.applicationGuildCommands(application.id, guildId)
+    : Routes.applicationCommands(application.id);
+
+  console.log(`🚀 Registering ${label} commands${guildId ? ` to guild ${guildId} (development mode)` : ' globally'}...`);
+  await rest.put(route, { body: commands.map((cmd) => cmd.toJSON()) });
+  console.log(`✅ ${label}: registered ${commands.length} command(s)`);
+}
 
 async function deployCommands() {
-  const clientId = process.env.DISCORD_CLIENT_ID;
-  const guildId = process.env.DISCORD_GUILD_ID;
-
-  if (!clientId) {
-    console.error('Error: DISCORD_CLIENT_ID environment variable is required');
-    console.error('You can get this from the Discord Developer Portal');
-    process.exit(1);
-  }
-
+  const guildId = process.env.DISCORD_GUILD_ID || undefined;
   const helperToken = process.env.DISCORD_TOKEN_HELPER;
-  const aeToken = process.env.DISCORD_TOKEN_AE;
+  const configuredStatusBots = statusBots.filter((bot) => process.env[bot.tokenEnv]);
 
-  if (!helperToken && !aeToken) {
+  if (!helperToken && configuredStatusBots.length === 0) {
     console.error('Error: At least one DISCORD_TOKEN_* environment variable is required');
     process.exit(1);
   }
 
-  const restHelper = helperToken ? new REST({ version: '10' }).setToken(helperToken) : null;
-  const restAe = aeToken ? new REST({ version: '10' }).setToken(aeToken) : null;
-
   try {
-    if (restHelper) {
-      console.log('🚀 Registering Helper bot commands...');
-      const allCommands = [...helperCommands];
-      if (guildId) {
-        console.log(`   Deploying to guild: ${guildId} (development mode)`);
-        await restHelper.put(
-          Routes.applicationGuildCommands(clientId, guildId),
-          { body: allCommands.map(cmd => cmd.toJSON()) }
-        );
-        console.log('✅ Helper commands registered!');
-      } else {
-        await restHelper.put(
-          Routes.applicationCommands(clientId),
-          { body: allCommands.map(cmd => cmd.toJSON()) }
-        );
-        console.log('✅ Helper commands registered globally!');
-      }
-      console.log(`   Registered ${allCommands.length} commands`);
+    if (helperToken) {
+      await registerCommands('Helper', helperToken, helperCommands, guildId);
     }
 
-    if (restAe) {
-      console.log('🚀 Registering Status bot commands (/setup)...');
-      const statusCommands = [setupCommand];
-      if (guildId) {
-        await restAe.put(
-          Routes.applicationGuildCommands(clientId, guildId),
-          { body: statusCommands.map(cmd => cmd.toJSON()) }
-        );
-        console.log('✅ Status bot commands registered to guild!');
-      } else {
-        await restAe.put(
-          Routes.applicationCommands(clientId),
-          { body: statusCommands.map(cmd => cmd.toJSON()) }
-        );
-        console.log('✅ Status bot commands registered globally!');
-      }
-      console.log(`   Registered ${statusCommands.length} commands`);
+    for (const bot of configuredStatusBots) {
+      await registerCommands(bot.name, process.env[bot.tokenEnv]!, [setupCommand], guildId);
     }
 
     console.log('\n✅ All commands registered successfully!');

@@ -95,7 +95,6 @@ This guide explains how to deploy the MotorStorm Status Bots on a Pterodactyl Pa
 | `AUTO_UPDATE` | Auto-pull on startup | false |
 | `USER_UPLOAD` | Skip install if files uploaded | false |
 | `DEBUG` | Enable debug logging | false |
-| `DISCORD_CLIENT_ID` | For command deployment | - |
 | `DISCORD_GUILD_ID` | Development server ID | - |
 
 ## Resource Requirements
@@ -162,7 +161,7 @@ All bots will:
 - Channel IDs are set for enabled bots
 - Channel IDs are valid 18-digit Discord IDs
 - Bot has permissions in the channels
-- Node.js 20 is installed (or using nodejs_20 egg)
+- Node.js 22 is installed (or using nodejs_22 egg)
 
 ### Issue: "Channel not found" errors
 

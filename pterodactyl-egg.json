@@ -10,7 +10,7 @@
   "description": "Discord status bots for MotorStorm servers (AE, Apoc, PR, MV) with multi-channel support and lobby notifications",
   "features": null,
   "docker_images": {
-    "ghcr.io/parkervcp/yolks:nodejs_20": "ghcr.io/parkervcp/yolks:nodejs_20"
+    "ghcr.io/parkervcp/yolks:nodejs_22": "ghcr.io/parkervcp/yolks:nodejs_22"
   },
   "file_denylist": [],
   "startup": "node dist/index.js",
@@ -23,7 +23,7 @@
   },
   "scripts": {
     "installation": {
-      "script": "#!/bin/bash\nset -e\n\ncd /mnt/server\n\nif [ \"${USER_UPLOAD}\" == \"true\" ] || [ \"${USER_UPLOAD}\" == \"1\" ]; then\n    echo \"Skipping installation - user uploaded files\"\n    exit 0\nfi\n\nif [ -n \"${GIT_REPO}\" ]; then\n    if [ -d .git ]; then\n        echo \"Updating git repository...\"\n        git pull\n    else\n        echo \"Cloning repository: ${GIT_REPO}\"\n        if [ -n \"${GIT_BRANCH}\" ]; then\n            git clone --single-branch --branch ${GIT_REPO} .\n        else\n            git clone ${GIT_REPO} .\n        fi\n    fi\nfi\n\nif [ -f package.json ]; then\n    echo \"Installing npm dependencies...\"\n    npm ci\n    echo \"Building TypeScript...\"\n    npm run build\n    echo \"Installation complete!\"\nelse\n    echo \"Error: package.json not found!\"\n    exit 1\nfi",
+      "script": "#!/bin/bash\nset -e\n\ncd /mnt/server\n\nif [ \"${USER_UPLOAD}\" == \"true\" ] || [ \"${USER_UPLOAD}\" == \"1\" ]; then\n    echo \"Skipping installation - user uploaded files\"\n    exit 0\nfi\n\nif [ -n \"${GIT_REPO}\" ]; then\n    if [ -d .git ]; then\n        echo \"Updating git repository...\"\n        git pull\n    else\n        echo \"Cloning repository: ${GIT_REPO}\"\n        if [ -n \"${GIT_BRANCH}\" ]; then\n            git clone --single-branch --branch \"${GIT_BRANCH}\" \"${GIT_REPO}\" .\n        else\n            git clone \"${GIT_REPO}\" .\n        fi\n    fi\nfi\n\nif [ -f package.json ]; then\n    echo \"Installing npm dependencies...\"\n    npm ci\n    echo \"Building TypeScript...\"\n    npm run build\n    echo \"Installation complete!\"\nelse\n    echo \"Error: package.json not found!\"\n    exit 1\nfi",
       "container": "ghcr.io/parkervcp/installers:debian",
       "entrypoint": "bash"
     }
@@ -337,16 +337,6 @@
       "user_viewable": true,
       "user_editable": true,
       "rules": "required|string",
-      "field_type": "text"
-    },
-    {
-      "name": "Discord Client ID",
-      "description": "Discord Application Client ID (for command deployment)",
-      "env_variable": "DISCORD_CLIENT_ID",
-      "default_value": "",
-      "user_viewable": true,
-      "user_editable": true,
-      "rules": "nullable|string",
       "field_type": "text"
     },
     {
